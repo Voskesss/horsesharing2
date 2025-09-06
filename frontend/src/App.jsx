@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import HomePage from './components/HomePage';
 import ProfileChoice from './pages/ProfileChoice';
 import RiderOnboarding from './pages/RiderOnboarding';
+import RiderProfile from './pages/RiderProfile';
 import OwnerOnboarding from './pages/OwnerOnboarding';
 import Dashboard from './pages/Dashboard';
 
@@ -24,6 +25,7 @@ function App() {
             <Route path="/callback" element={<div className="min-h-screen flex items-center justify-center">Loading...</div>} />
             <Route path="/profile-choice" element={<ProfileChoice />} />
             <Route path="/rider-onboarding" element={<RiderOnboarding />} />
+            <Route path="/rider-profile" element={<RiderProfile />} />
             <Route path="/owner-onboarding" element={<OwnerOnboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>

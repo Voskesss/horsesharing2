@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
+import { riderProfileAPI, transformProfileDataForAPI } from '../utils/api';
 
 const RiderOnboarding = () => {
   const navigate = useNavigate();
@@ -102,10 +104,29 @@ const RiderOnboarding = () => {
     }
   };
 
+  // Bereken progress percentage
+  const profileData = {
+    basicInfo,
+    availability,
+    budget,
+    experience,
+    goals,
+    tasks,
+    preferences,
+    media
+  };
+  const progressPercentage = calculateRiderProfileProgress(profileData);
+
   const handleSubmit = async () => {
-    // TODO: Implement API call to save rider profile
-    console.log('Saving rider profile...');
-    navigate('/dashboard');
+    try {
+      const apiData = transformProfileDataForAPI(profileData);
+      await riderProfileAPI.createOrUpdate(apiData);
+      console.log('Rider profile saved successfully!');
+      navigate('/rider-profile');
+    } catch (error) {
+      console.error('Error saving rider profile:', error);
+      alert('Er ging iets mis bij het opslaan. Probeer het opnieuw.');
+    }
   };
 
   const transportOptions = ['auto', 'openbaar_vervoer', 'fiets', 'te_voet'];
@@ -136,12 +157,12 @@ const RiderOnboarding = () => {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-blue-600">Stap {currentStep} van {totalSteps}</span>
-              <span className="text-sm text-gray-500">{Math.round((currentStep / totalSteps) * 100)}%</span>
+              <span className="text-sm text-gray-500">{progressPercentage}% compleet</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                style={{ width: `${progressPercentage}%` }}
               ></div>
             </div>
           </div>
@@ -310,14 +331,379 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Placeholder voor andere stappen */}
-          {currentStep > 2 && currentStep < 8 && (
+          {/* Step 3: Budget */}
+          {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">{currentStep}</span>
-                Stap {currentStep} - Coming Soon
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">3</span>
+                Budget
               </h2>
-              <p className="text-gray-600">Deze stap wordt binnenkort toegevoegd...</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum budget (€/maand)</label>
+                  <input
+                    type="number"
+                    value={budget.budget_min_euro}
+                    onChange={(e) => setBudget({...budget, budget_min_euro: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Maximum budget (€/maand)</label>
+                  <input
+                    type="number"
+                    value={budget.budget_max_euro}
+                    onChange={(e) => setBudget({...budget, budget_max_euro: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Budget type</label>
+                <select
+                  value={budget.budget_type}
+                  onChange={(e) => setBudget({...budget, budget_type: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="monthly">Per maand</option>
+                  <option value="weekly">Per week</option>
+                  <option value="per_session">Per sessie</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Ervaring */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">4</span>
+                Ervaring
+              </h2>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Jaren ervaring</label>
+                <input
+                  type="number"
+                  value={experience.experience_years}
+                  onChange={(e) => setExperience({...experience, experience_years: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Certificering niveau</label>
+                <select
+                  value={experience.certification_level}
+                  onChange={(e) => setExperience({...experience, certification_level: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Selecteer niveau...</option>
+                  {certificationLevels.map(level => (
+                    <option key={level} value={level}>{level.replace('_', ' ')}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-4">Comfort levels</label>
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={experience.comfort_levels.traffic}
+                      onChange={(e) => setExperience({
+                        ...experience, 
+                        comfort_levels: {...experience.comfort_levels, traffic: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Comfortabel in verkeer</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={experience.comfort_levels.outdoor_solo}
+                      onChange={(e) => setExperience({
+                        ...experience, 
+                        comfort_levels: {...experience.comfort_levels, outdoor_solo: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Alleen buitenritten</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={experience.comfort_levels.nervous_horses}
+                      onChange={(e) => setExperience({
+                        ...experience, 
+                        comfort_levels: {...experience.comfort_levels, nervous_horses: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Nerveuze paarden</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={experience.comfort_levels.young_horses}
+                      onChange={(e) => setExperience({
+                        ...experience, 
+                        comfort_levels: {...experience.comfort_levels, young_horses: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Jonge paarden</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Max spronghoogte (cm)</label>
+                <input
+                  type="number"
+                  value={experience.comfort_levels.jumping_height}
+                  onChange={(e) => setExperience({
+                    ...experience, 
+                    comfort_levels: {...experience.comfort_levels, jumping_height: parseInt(e.target.value)}
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Doelen */}
+          {currentStep === 5 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">5</span>
+                Doelen
+              </h2>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rijdoelen</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ridingGoals.map(goal => (
+                    <button
+                      key={goal}
+                      type="button"
+                      onClick={() => toggleArrayItem(goals.riding_goals, goal, (items) => setGoals({...goals, riding_goals: items}))}
+                      className={`p-2 text-sm rounded-lg border transition-colors ${
+                        goals.riding_goals.includes(goal)
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {goal.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Discipline voorkeuren</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {disciplines.map(discipline => (
+                    <button
+                      key={discipline}
+                      type="button"
+                      onClick={() => toggleArrayItem(goals.discipline_preferences, discipline, (items) => setGoals({...goals, discipline_preferences: items}))}
+                      className={`p-2 text-sm rounded-lg border transition-colors ${
+                        goals.discipline_preferences.includes(discipline)
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {discipline.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Persoonlijkheidsstijl</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {personalityStyles.map(style => (
+                    <button
+                      key={style}
+                      type="button"
+                      onClick={() => toggleArrayItem(goals.personality_style, style, (items) => setGoals({...goals, personality_style: items}))}
+                      className={`p-2 text-sm rounded-lg border transition-colors ${
+                        goals.personality_style.includes(style)
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 6: Taken */}
+          {currentStep === 6 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">6</span>
+                Taken
+              </h2>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bereid om te helpen met</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {availableTasks.map(task => (
+                    <button
+                      key={task}
+                      type="button"
+                      onClick={() => toggleArrayItem(tasks.willing_tasks, task, (items) => setTasks({...tasks, willing_tasks: items}))}
+                      className={`p-2 text-sm rounded-lg border transition-colors ${
+                        tasks.willing_tasks.includes(task)
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {task.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Taak frequentie</label>
+                <select
+                  value={tasks.task_frequency}
+                  onChange={(e) => setTasks({...tasks, task_frequency: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Selecteer frequentie...</option>
+                  <option value="daily">Dagelijks</option>
+                  <option value="weekly">Wekelijks</option>
+                  <option value="monthly">Maandelijks</option>
+                  <option value="as_needed">Indien nodig</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Step 7: Voorkeuren */}
+          {currentStep === 7 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">7</span>
+                Voorkeuren
+              </h2>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-4">Materiaal voorkeuren</label>
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={preferences.material_preferences.bitless_ok}
+                      onChange={(e) => setPreferences({
+                        ...preferences, 
+                        material_preferences: {...preferences.material_preferences, bitless_ok: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Bitloos rijden OK</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={preferences.material_preferences.spurs}
+                      onChange={(e) => setPreferences({
+                        ...preferences, 
+                        material_preferences: {...preferences.material_preferences, spurs: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Sporen gebruiken</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={preferences.material_preferences.auxiliary_reins}
+                      onChange={(e) => setPreferences({
+                        ...preferences, 
+                        material_preferences: {...preferences.material_preferences, auxiliary_reins: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Hulpteugels OK</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={preferences.material_preferences.own_helmet}
+                      onChange={(e) => setPreferences({
+                        ...preferences, 
+                        material_preferences: {...preferences.material_preferences, own_helmet: e.target.checked}
+                      })}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Eigen cap</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gezondheids beperkingen</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {healthRestrictions.map(restriction => (
+                    <button
+                      key={restriction}
+                      type="button"
+                      onClick={() => toggleArrayItem(preferences.health_restrictions, restriction, (items) => setPreferences({...preferences, health_restrictions: items}))}
+                      className={`p-2 text-sm rounded-lg border transition-colors ${
+                        preferences.health_restrictions.includes(restriction)
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {restriction.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={preferences.insurance_coverage}
+                    onChange={(e) => setPreferences({...preferences, insurance_coverage: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Ik heb een verzekering</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">No-go's</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {noGos.map(nogo => (
+                    <button
+                      key={nogo}
+                      type="button"
+                      onClick={() => toggleArrayItem(preferences.no_gos, nogo, (items) => setPreferences({...preferences, no_gos: items}))}
+                      className={`p-2 text-sm rounded-lg border transition-colors ${
+                        preferences.no_gos.includes(nogo)
+                          ? 'bg-red-100 border-red-500 text-red-700'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {nogo.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
