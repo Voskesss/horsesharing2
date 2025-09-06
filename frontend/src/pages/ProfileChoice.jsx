@@ -1,23 +1,89 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { createAPI } from '../utils/api';
 
 const ProfileChoice = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useKindeAuth();
+  const { isAuthenticated, getToken } = useKindeAuth();
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showReset, setShowReset] = useState(false);
 
   if (!isAuthenticated) {
     navigate('/');
     return null;
   }
 
-  const handleChoice = (type) => {
-    if (type === 'rider') {
-      navigate('/rider-onboarding');
-    } else if (type === 'owner') {
-      navigate('/owner-onboarding');
+  // Maak API instance met token functie
+  const api = createAPI(getToken);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const userData = await api.user.getMe();
+        setUserInfo(userData);
+        
+        // Als user al een profile type heeft gekozen, redirect naar juiste onboarding
+        if (userData.profile_type_chosen) {
+          if (userData.profile_type_chosen === 'rider') {
+            if (userData.onboarding_completed) {
+              navigate('/rider-profile');
+            } else {
+              navigate('/rider-onboarding');
+            }
+          } else if (userData.profile_type_chosen === 'owner') {
+            navigate('/owner-onboarding');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, [navigate, api.user]);
+
+  const handleChoice = async (type) => {
+    try {
+      await api.user.setProfileType(type);
+      if (type === 'rider') {
+        navigate('/rider-onboarding');
+      } else if (type === 'owner') {
+        navigate('/owner-onboarding');
+      }
+    } catch (error) {
+      console.error('Error setting profile type:', error);
+      alert('Er ging iets mis. Probeer het opnieuw.');
     }
   };
+
+  const handleReset = async () => {
+    if (window.confirm('Weet je zeker dat je je profiel wilt resetten? Alle gegevens worden verwijderd.')) {
+      try {
+        await api.user.resetProfile();
+        setUserInfo({...userInfo, profile_type_chosen: null, onboarding_completed: false});
+        setShowReset(false);
+        alert('Profiel succesvol gereset!');
+      } catch (error) {
+        console.error('Error resetting profile:', error);
+        alert('Er ging iets mis bij het resetten. Probeer het opnieuw.');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 py-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Laden...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 py-20">
@@ -29,83 +95,89 @@ const ProfileChoice = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Kies je profiel om te beginnen met het vinden van je perfecte match
           </p>
+          
+          {/* Reset knop als user al een keuze heeft gemaakt */}
+          {userInfo?.profile_type_chosen && (
+            <div className="mt-6">
+              <button
+                onClick={() => setShowReset(!showReset)}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                Verkeerde keuze gemaakt? Reset je profiel
+              </button>
+              
+              {showReset && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-md mx-auto">
+                  <p className="text-sm text-yellow-800 mb-3">
+                    Dit verwijdert al je profiel gegevens permanent.
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={handleReset}
+                      className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                    >
+                      Ja, reset profiel
+                    </button>
+                    <button
+                      onClick={() => setShowReset(false)}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400"
+                    >
+                      Annuleren
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
           {/* Ruiter Card */}
           <div 
             onClick={() => handleChoice('rider')}
-            className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:-translate-y-2 border border-gray-100"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 p-8 border-2 border-transparent hover:border-blue-200"
           >
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-3xl">🏇</span>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Ik ben een Ruiter
-              </h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                Ik zoek een paard om mee te rijden en wil graag bijdragen aan de verzorging en kosten.
+              <div className="text-6xl mb-6">🏇</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Ik ben een Ruiter</h2>
+              <p className="text-gray-600 mb-6">
+                Ik zoek een paard om mee te rijden en te verzorgen
               </p>
-              <div className="space-y-2 text-sm text-gray-500 mb-6">
-                <div className="flex items-center justify-center">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
-                  Zoek paarden in je buurt
-                </div>
-                <div className="flex items-center justify-center">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
-                  Deel kosten en verantwoordelijkheden
-                </div>
-                <div className="flex items-center justify-center">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
-                  Vind je ideale rijpartner
-                </div>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <ul className="text-sm text-blue-800 space-y-2">
+                  <li>• Vind paarden in jouw buurt</li>
+                  <li>• Stel je eigen schema in</li>
+                  <li>• Bouw een band met paarden</li>
+                </ul>
               </div>
-              <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 group-hover:scale-105">
-                Start als Ruiter
-              </button>
             </div>
           </div>
 
           {/* Eigenaar Card */}
           <div 
             onClick={() => handleChoice('owner')}
-            className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:-translate-y-2 border border-gray-100"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 p-8 border-2 border-transparent hover:border-emerald-200"
           >
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-3xl">🐎</span>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Ik ben een Eigenaar
-              </h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                Ik heb een paard en zoek een betrouwbare bijrijder om kosten en verzorging te delen.
+              <div className="text-6xl mb-6">🐴</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Ik ben een Eigenaar</h2>
+              <p className="text-gray-600 mb-6">
+                Ik heb een paard en zoek iemand om mee te delen
               </p>
-              <div className="space-y-2 text-sm text-gray-500 mb-6">
-                <div className="flex items-center justify-center">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
-                  Vind betrouwbare bijrijders
-                </div>
-                <div className="flex items-center justify-center">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
-                  Deel kosten en verzorging
-                </div>
-                <div className="flex items-center justify-center">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
-                  Meer tijd voor je paard
-                </div>
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <ul className="text-sm text-emerald-800 space-y-2">
+                  <li>• Vind betrouwbare ruiters</li>
+                  <li>• Deel de zorg voor je paard</li>
+                  <li>• Verdien bij met sharing</li>
+                </ul>
               </div>
-              <button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 group-hover:scale-105">
-                Start als Eigenaar
-              </button>
             </div>
           </div>
         </div>
 
         <div className="text-center mt-12">
           <p className="text-gray-500 text-sm">
-            Je kunt later altijd een tweede profiel aanmaken als je beide rollen hebt
+            Je profiel keuze wordt automatisch onthouden
           </p>
         </div>
       </div>

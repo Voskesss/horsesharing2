@@ -3,13 +3,16 @@
 const API_BASE_URL = 'http://localhost:8000';
 
 // Helper functie voor API calls met authentication
-async function apiCall(endpoint, options = {}) {
-  const token = localStorage.getItem('kinde_token'); // Kinde token uit localStorage
+// Deze functie verwacht dat de token wordt meegegeven
+async function apiCall(endpoint, options = {}, token = null) {
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
   
   const config = {
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      'Authorization': `Bearer ${token}`,
       ...options.headers,
     },
     ...options,
@@ -18,43 +21,85 @@ async function apiCall(endpoint, options = {}) {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
   
   if (!response.ok) {
+    if (response.status === 403 || response.status === 401) {
+      throw new Error('Not authenticated');
+    }
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || `HTTP ${response.status}`);
+    const errorMessage = error.detail || error.message || `HTTP ${response.status}`;
+    console.error('API Error:', errorMessage, error);
+    throw new Error(errorMessage);
   }
 
   return response.json();
 }
 
-// Rider Profile API calls
-export const riderProfileAPI = {
-  // Haal rider profile op
-  async get() {
-    return apiCall('/rider-profile');
+// Maak API object dat token gebruikt
+export const createAPI = (getToken) => ({
+  // Rider Profile API calls
+  riderProfile: {
+    // Haal rider profile op
+    async get() {
+      const token = await getToken();
+      return apiCall('/rider-profile', {}, token);
+    },
+
+    // Maak of update rider profile
+    async createOrUpdate(profileData) {
+      const token = await getToken();
+      return apiCall('/rider-profile', {
+        method: 'POST',
+        body: JSON.stringify(profileData),
+      }, token);
+    },
   },
 
-  // Maak of update rider profile
-  async createOrUpdate(profileData) {
-    return apiCall('/rider-profile', {
-      method: 'POST',
-      body: JSON.stringify(profileData),
-    });
+  // User API calls
+  user: {
+    // Haal huidige user info op
+    async getMe() {
+      const token = await getToken();
+      return apiCall('/auth/me', {}, token);
+    },
+
+    // Stel profile type in
+    async setProfileType(profileType) {
+      const token = await getToken();
+      return apiCall('/auth/set-profile-type', {
+        method: 'POST',
+        body: JSON.stringify({ profile_type: profileType }),
+      }, token);
+    },
+
+    // Reset profiel
+    async resetProfile() {
+      const token = await getToken();
+      return apiCall('/auth/reset-profile', {
+        method: 'POST',
+      }, token);
+    },
+
+    // Voltooi onboarding
+    async completeOnboarding(profileType) {
+      const token = await getToken();
+      return apiCall('/auth/complete-onboarding', {
+        method: 'POST',
+        body: JSON.stringify({ profile_type: profileType }),
+      }, token);
+    },
   },
+});
+
+// Legacy exports voor backwards compatibility
+export const riderProfileAPI = {
+  get: () => { throw new Error('Use createAPI with token instead'); },
+  createOrUpdate: () => { throw new Error('Use createAPI with token instead'); },
 };
 
-// User API calls
 export const userAPI = {
-  // Haal huidige user info op
-  async getMe() {
-    return apiCall('/auth/me');
-  },
-
-  // Voltooi onboarding
-  async completeOnboarding(profileType) {
-    return apiCall('/auth/complete-onboarding', {
-      method: 'POST',
-      body: JSON.stringify({ profile_type: profileType }),
-    });
-  },
+  getMe: () => { throw new Error('Use createAPI with token instead'); },
+  setProfileType: () => { throw new Error('Use createAPI with token instead'); },
+  resetProfile: () => { throw new Error('Use createAPI with token instead'); },
+  completeOnboarding: () => { throw new Error('Use createAPI with token instead'); },
 };
 
 // Transform frontend profile data naar backend format
@@ -120,7 +165,7 @@ export function transformProfileDataForAPI(profileData) {
 }
 
 // Transform backend data naar frontend format
-export function transformAPIDataForProfile(apiData) {
+export function transformProfileDataFromAPI(apiData) {
   return {
     basicInfo: {
       first_name: apiData.first_name || '',

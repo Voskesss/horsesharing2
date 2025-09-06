@@ -53,7 +53,7 @@ def get_current_user(
         # Create new user from Kinde data
         user = User(
             kinde_id=kinde_user["id"],
-            email=kinde_user["email"],
+            email=kinde_user.get("email", ""),
             name=kinde_user.get("given_name", "") + " " + kinde_user.get("family_name", ""),
             phone=kinde_user.get("phone_number")
         )

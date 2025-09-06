@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { createAPI, transformProfileDataFromAPI } from '../utils/api';
 import { calculateRiderProfileProgress, getIncompleteSteps } from '../utils/riderProfileProgress';
-import { riderProfileAPI, transformAPIDataForProfile } from '../utils/api';
 
 const RiderProfile = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useKindeAuth();
+  const { isAuthenticated, user, getToken } = useKindeAuth();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,8 +18,9 @@ const RiderProfile = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        const apiData = await riderProfileAPI.get();
-        const transformedData = transformAPIDataForProfile(apiData);
+        const api = createAPI(getToken);
+        const apiData = await api.riderProfile.get();
+        const transformedData = transformProfileDataFromAPI(apiData);
         setProfileData(transformedData);
       } catch (error) {
         console.error('Error fetching rider profile:', error);

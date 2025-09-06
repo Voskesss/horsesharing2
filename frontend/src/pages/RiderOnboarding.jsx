@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { createAPI, transformProfileDataForAPI } from '../utils/api';
 import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
-import { riderProfileAPI, transformProfileDataForAPI } from '../utils/api';
 
 const RiderOnboarding = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useKindeAuth();
+  const { isAuthenticated, getToken } = useKindeAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 8;
 
@@ -119,8 +119,9 @@ const RiderOnboarding = () => {
 
   const handleSubmit = async () => {
     try {
+      const api = createAPI(getToken);
       const apiData = transformProfileDataForAPI(profileData);
-      await riderProfileAPI.createOrUpdate(apiData);
+      await api.riderProfile.createOrUpdate(apiData);
       console.log('Rider profile saved successfully!');
       navigate('/rider-profile');
     } catch (error) {

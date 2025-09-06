@@ -2,9 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List, Optional
-from database import get_db
-from auth import get_current_user, get_optional_user
+from database import get_db, User, RiderProfile
+from auth import get_current_user
+import uvicorn
+from auth import get_optional_user
 from models import User, RiderProfile
 
 app = FastAPI(title="HorseSharing API", version="1.0.0")
@@ -42,18 +43,22 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "created_at": current_user.created_at
     }
 
+
+class ProfileTypeRequest(BaseModel):
+    profile_type: str
+
 @app.post("/auth/set-profile-type")
 async def set_profile_type(
-    profile_type: str,
+    request: ProfileTypeRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Set profile type choice (rider/owner)"""
-    current_user.profile_type_chosen = profile_type
+    current_user.profile_type_chosen = request.profile_type
     db.commit()
     db.refresh(current_user)
     
-    return {"message": "Profile type set", "profile_type": profile_type}
+    return {"message": "Profile type set", "profile_type": request.profile_type}
 
 @app.post("/auth/reset-profile")
 async def reset_profile(
