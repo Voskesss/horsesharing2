@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
-import { createAPI, transformProfileDataForAPI } from '../utils/api';
+import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
 import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
 
 const RiderOnboarding = () => {
   const navigate = useNavigate();
   const { isAuthenticated, getToken } = useKindeAuth();
   const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(true);
   const totalSteps = 8;
 
   if (!isAuthenticated) {
@@ -117,6 +118,60 @@ const RiderOnboarding = () => {
   };
   const progressPercentage = calculateRiderProfileProgress(profileData);
 
+  // Auto-save functie
+  const autoSave = async () => {
+    try {
+      const api = createAPI(getToken);
+      const apiData = transformProfileDataForAPI(profileData);
+      await api.riderProfile.createOrUpdate(apiData);
+      console.log('Profile auto-saved successfully');
+    } catch (error) {
+      console.warn('Auto-save failed:', error);
+    }
+  };
+
+  // Load existing profile data on component mount
+  useEffect(() => {
+    const loadExistingProfile = async () => {
+      try {
+        const api = createAPI(getToken);
+        const apiData = await api.riderProfile.get();
+        const transformedData = transformProfileDataFromAPI(apiData);
+        
+        // Update state with existing data
+        setBasicInfo(transformedData.basicInfo);
+        setAvailability(transformedData.availability);
+        setBudget(transformedData.budget);
+        setExperience(transformedData.experience);
+        setGoals(transformedData.goals);
+        setTasks(transformedData.tasks);
+        setPreferences(transformedData.preferences);
+        setMedia(transformedData.media);
+        
+        console.log('Existing profile loaded successfully');
+      } catch (error) {
+        console.log('No existing profile found, starting fresh');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExistingProfile();
+  }, [getToken]);
+
+  // Auto-save elke 30 seconden als er data is
+  useEffect(() => {
+    if (loading) return; // Don't auto-save while loading
+    
+    const interval = setInterval(() => {
+      if (progressPercentage > 10) { // Alleen auto-save als er substantiële data is
+        autoSave();
+      }
+    }, 30000); // 30 seconden
+
+    return () => clearInterval(interval);
+  }, [profileData, progressPercentage, loading]);
+
   const handleSubmit = async () => {
     try {
       const api = createAPI(getToken);
@@ -130,6 +185,18 @@ const RiderOnboarding = () => {
     }
   };
 
+  const handleSaveDraft = async () => {
+    try {
+      const api = createAPI(getToken);
+      const apiData = transformProfileDataForAPI(profileData);
+      await api.riderProfile.createOrUpdate(apiData);
+      alert('Concept opgeslagen! Je kunt later verder gaan.');
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('Er ging iets mis bij het opslaan van het concept.');
+    }
+  };
+
   const transportOptions = ['auto', 'openbaar_vervoer', 'fiets', 'te_voet'];
   const weekDays = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
   const timeBlocks = ['ochtend', 'middag', 'avond'];
@@ -140,6 +207,17 @@ const RiderOnboarding = () => {
   const noGos = ['drukke_stallen', 'avond_afspraken', 'weekenden', 'slecht_weer', 'grote_groepen'];
   const personalityStyles = ['rustig', 'energiek', 'geduldig', 'assertief', 'flexibel', 'gestructureerd'];
   const certificationLevels = ['beginner', 'gevorderd_beginner', 'intermediate', 'gevorderd', 'expert'];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 py-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Profiel gegevens laden...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
@@ -818,14 +896,22 @@ const RiderOnboarding = () => {
 
                 {/* Submit Button */}
                 <div className="text-center pt-4">
-                  <button
-                    onClick={handleSubmit}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300"
-                  >
-                    Profiel Voltooien & Opslaan
-                  </button>
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleSubmit}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300"
+                    >
+                      Profiel Voltooien & Opslaan
+                    </button>
+                    <button
+                      onClick={handleSaveDraft}
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-6 rounded-full transition-all duration-300"
+                    >
+                      Concept Opslaan & Later Verder
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Je kunt je profiel later altijd aanpassen
+                    Auto-save elke 30 seconden • Je kunt je profiel later altijd aanpassen
                   </p>
                 </div>
               </div>
@@ -833,34 +919,46 @@ const RiderOnboarding = () => {
           )}
 
           {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                currentStep === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Vorige
-            </button>
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            {/* Concept Opslaan knop voor alle stappen behalve de laatste */}
+            {currentStep < totalSteps && (
+              <div className="text-center mb-4">
+                <button
+                  onClick={handleSaveDraft}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-6 rounded-full transition-all duration-300"
+                >
+                  💾 Concept Opslaan & Later Verder
+                </button>
+                <p className="text-xs text-gray-500 mt-1">
+                  Auto-save elke 30 seconden actief
+                </p>
+              </div>
+            )}
             
-            {currentStep < totalSteps ? (
+            <div className="flex justify-between">
+              <button
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  currentStep === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Vorige
+              </button>
               <button
                 onClick={nextStep}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                disabled={currentStep === totalSteps}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  currentStep === totalSteps
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
                 Volgende
               </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-colors"
-              >
-                Voltooien
-              </button>
-            )}
+            </div>
           </div>
         </div>
       </div>

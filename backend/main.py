@@ -2,11 +2,11 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from database import get_db, User, RiderProfile
-from auth import get_current_user
-import uvicorn
-from auth import get_optional_user
+from typing import Optional, List
+from database import get_db
 from models import User, RiderProfile
+from auth import get_current_user, get_optional_user
+import uvicorn
 
 app = FastAPI(title="HorseSharing API", version="1.0.0")
 
