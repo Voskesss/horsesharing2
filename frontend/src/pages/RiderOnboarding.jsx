@@ -707,17 +707,127 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 8: Voltooien */}
+          {/* Step 8: Media & Voltooien */}
           {currentStep === 8 && (
-            <div className="space-y-6 text-center">
-              <h2 className="text-xl font-semibold text-gray-900">Profiel Voltooien</h2>
-              <p className="text-gray-600">Je bent bijna klaar! Controleer je gegevens en voltooi je profiel.</p>
-              <button
-                onClick={handleSubmit}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300"
-              >
-                Profiel Voltooien
-              </button>
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">8</span>
+                Foto's & Video (Optioneel)
+              </h2>
+
+              <div className="space-y-6">
+                {/* Foto Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Profiel foto's
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                    <div className="space-y-2">
+                      <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                        <span className="text-2xl">📷</span>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">
+                          Sleep foto's hierheen of klik om te uploaden
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          PNG, JPG tot 5MB (max 5 foto's)
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files);
+                          if (files.length > 5) {
+                            alert('Maximaal 5 foto\'s toegestaan');
+                            return;
+                          }
+                          // Voor nu slaan we alleen de bestandsnamen op
+                          const fileNames = files.map(file => file.name);
+                          setMedia({...media, photos: fileNames});
+                        }}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <label
+                        htmlFor="photo-upload"
+                        className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
+                      >
+                        Foto's Selecteren
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {media.photos.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-600 mb-2">Geselecteerde foto's:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {media.photos.map((photo, index) => (
+                          <div key={index} className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-sm">
+                            <span className="text-blue-700">{photo}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newPhotos = media.photos.filter((_, i) => i !== index);
+                                setMedia({...media, photos: newPhotos});
+                              }}
+                              className="ml-2 text-blue-500 hover:text-blue-700"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Video Intro URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Video introductie (YouTube/Vimeo link)
+                  </label>
+                  <input
+                    type="url"
+                    value={media.video_intro_url}
+                    onChange={(e) => setMedia({...media, video_intro_url: e.target.value})}
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Optioneel: Deel een korte video waarin je jezelf voorstelt
+                  </p>
+                </div>
+
+                {/* Profiel Samenvatting */}
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h3 className="font-medium text-blue-900 mb-2">Profiel Samenvatting</h3>
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <p>• Naam: {basicInfo.first_name} {basicInfo.last_name}</p>
+                    <p>• Postcode: {basicInfo.postcode}</p>
+                    <p>• Budget: €{budget.budget_min_euro} - €{budget.budget_max_euro}</p>
+                    <p>• Ervaring: {experience.experience_years} jaar</p>
+                    <p>• Beschikbare dagen: {availability.available_days.length} geselecteerd</p>
+                    <p>• Rijdoelen: {goals.riding_goals.length} geselecteerd</p>
+                    <p>• Bereid te helpen met: {tasks.willing_tasks.length} taken</p>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="text-center pt-4">
+                  <button
+                    onClick={handleSubmit}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300"
+                  >
+                    Profiel Voltooien & Opslaan
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Je kunt je profiel later altijd aanpassen
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 

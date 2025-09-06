@@ -42,6 +42,44 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "created_at": current_user.created_at
     }
 
+@app.post("/auth/set-profile-type")
+async def set_profile_type(
+    profile_type: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set profile type choice (rider/owner)"""
+    current_user.profile_type_chosen = profile_type
+    db.commit()
+    db.refresh(current_user)
+    
+    return {"message": "Profile type set", "profile_type": profile_type}
+
+@app.post("/auth/reset-profile")
+async def reset_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Reset user profile - delete rider/owner profiles and reset onboarding"""
+    # Delete rider profile if exists
+    rider_profile = db.query(RiderProfile).filter(RiderProfile.user_id == current_user.id).first()
+    if rider_profile:
+        db.delete(rider_profile)
+    
+    # TODO: Delete owner profile when implemented
+    # owner_profile = db.query(OwnerProfile).filter(OwnerProfile.user_id == current_user.id).first()
+    # if owner_profile:
+    #     db.delete(owner_profile)
+    
+    # Reset user onboarding status
+    current_user.onboarding_completed = False
+    current_user.profile_type_chosen = None
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return {"message": "Profile reset successfully"}
+
 @app.post("/auth/complete-onboarding")
 async def complete_onboarding(
     profile_type: str,

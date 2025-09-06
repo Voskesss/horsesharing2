@@ -186,6 +186,53 @@ const RiderProfile = () => {
           )}
         </div>
 
+        {/* Media Section */}
+        {(profileData.media.photos.length > 0 || profileData.media.video_intro_url) && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Media</h3>
+            
+            {/* Foto's */}
+            {profileData.media.photos.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Profiel foto's</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {profileData.media.photos.map((photo, index) => (
+                    <div key={index} className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <span className="text-2xl mb-1 block">📷</span>
+                        <span className="text-xs text-gray-500">{photo}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Video */}
+            {profileData.media.video_intro_url && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Video introductie</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <span className="text-2xl mr-3">🎥</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Video introductie</p>
+                      <a 
+                        href={profileData.media.video_intro_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Bekijk video
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Profile Sections */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Basis Informatie */}
