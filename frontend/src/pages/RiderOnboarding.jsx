@@ -250,6 +250,8 @@ const RiderOnboarding = () => {
   const fnrsLevels = Array.from({ length: 12 }, (_, i) => `FNRS F${i + 1}`);
   const dressuurLevels = ['Dressuur B','Dressuur L1','Dressuur L2','Dressuur M1','Dressuur M2','Dressuur Z1','Dressuur Z2','Dressuur ZZ-Licht','Dressuur ZZ-Zwaar'];
   const springenLevels = ['Springen B','Springen L','Springen M','Springen Z','Springen ZZ'];
+  const eventingLevels = ['Eventing B','Eventing L','Eventing M','Eventing Z'];
+  const workingEquitationLevels = ['Working Equitation (WE)'];
 
   if (loading) {
     return (
@@ -561,6 +563,36 @@ const RiderOnboarding = () => {
                           type="button"
                           onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
                           className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-purple-100 border-purple-500 text-purple-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Eventing</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {eventingLevels.map(level => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-orange-100 border-orange-500 text-orange-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Working Equitation</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {workingEquitationLevels.map(level => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-rose-100 border-rose-500 text-rose-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                         >
                           {level}
                         </button>
