@@ -274,16 +274,12 @@ async def create_or_update_rider_profile(
         if 'stallions' in comfort:
             new_profile.comfortable_with_stallions = bool(comfort['stallions'])
 
-        # Trail rides toggle via discipline_preferences
+        # Dedicated comfort flag for trail rides (no coupling to discipline)
         if 'trail_rides' in comfort:
-            trails_on = bool(comfort['trail_rides'])
-            dp = (data.get('discipline_preferences') or [])
-            # ensure buitenritten present/absent
-            if trails_on and 'buitenritten' not in dp:
-                dp = dp + ['buitenritten']
-            if (not trails_on) and 'buitenritten' in dp:
-                dp = [x for x in dp if x != 'buitenritten']
-            new_profile.discipline_preferences = dp
+            try:
+                new_profile.comfortable_with_trail_rides = bool(comfort['trail_rides'])
+            except Exception:
+                new_profile.comfortable_with_trail_rides = False
 
         # Certifications mapping
         certifications = data.get('certifications', [])
@@ -623,15 +619,11 @@ async def create_or_update_rider_profile(
             existing_profile.comfortable_with_young_horses = bool(comfort['young_horses'])
         if 'stallions' in comfort:
             existing_profile.comfortable_with_stallions = bool(comfort['stallions'])
-        # Only adjust 'buitenritten' from trail_rides if discipline_preferences was NOT explicitly provided
-        if 'trail_rides' in comfort and 'discipline_preferences' not in payload:
-            trails_on = bool(comfort['trail_rides'])
-            dp = (existing_profile.discipline_preferences or [])
-            if trails_on and 'buitenritten' not in dp:
-                dp = dp + ['buitenritten']
-            if (not trails_on) and 'buitenritten' in dp:
-                dp = [x for x in dp if x != 'buitenritten']
-            existing_profile.discipline_preferences = dp
+        if 'trail_rides' in comfort:
+            try:
+                existing_profile.comfortable_with_trail_rides = bool(comfort['trail_rides'])
+            except Exception:
+                pass
 
         # 4) Activities on UPDATE (use payload keys only)
         if 'activity_mode' in payload:
@@ -760,7 +752,7 @@ async def get_rider_profile(
             "nervous_horses": bool(profile.comfortable_with_nervous_horses),
             "young_horses": bool(profile.comfortable_with_young_horses),
             "stallions": bool(profile.comfortable_with_stallions),
-            "trail_rides": bool('buitenritten' in (profile.discipline_preferences or [])),
+            "trail_rides": bool(getattr(profile, 'comfortable_with_trail_rides', False)),
             "jumping_height": profile.max_jump_height or 0
         },
         "riding_goals": profile.goals if profile.goals else [],

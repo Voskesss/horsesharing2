@@ -64,6 +64,7 @@ class RiderProfile(Base):
     comfortable_with_nervous_horses = Column(Boolean, default=False)
     comfortable_with_young_horses = Column(Boolean, default=False)
     comfortable_with_stallions = Column(Boolean, default=False)
+    comfortable_with_trail_rides = Column(Boolean, default=False)
     max_jump_height = Column(Integer, nullable=True)  # cm
     
     # Goals & Preferences
