@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
@@ -147,6 +147,16 @@ const RiderOnboarding = () => {
     }
   };
 
+  // Smart autosave state/refs
+  const isDirtyRef = useRef(false);
+  const lastEditAtRef = useRef(Date.now());
+  const idleSavesRef = useRef(0);
+  const pausedRef = useRef(false);
+  const debounceTimerRef = useRef(null);
+  const MAX_IDLE_SAVES = 4; // ~2 min bij 30s interval
+  const AUTOSAVE_INTERVAL_MS = 30000;
+  const DEBOUNCE_MS = 1500;
+
   // Load existing profile data on component mount
   useEffect(() => {
     const loadExistingProfile = async () => {
@@ -215,18 +225,63 @@ const RiderOnboarding = () => {
     prefillFromKinde();
   }, [getToken]);
 
-  // Auto-save elke 30 seconden als er data is
+  // Mark dirty when user changes any part of the profile (after initial load)
+  useEffect(() => {
+    if (loading) return;
+    // mark dirty and debounce a save
+    isDirtyRef.current = true;
+    lastEditAtRef.current = Date.now();
+    idleSavesRef.current = 0; // reset idle counter on change
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(async () => {
+      if (pausedRef.current) return;
+      if (!isDirtyRef.current) return;
+      await autoSave();
+      isDirtyRef.current = false; // just saved changes
+    }, DEBOUNCE_MS);
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [basicInfo, availability, budget, experience, goals, tasks, preferences, media, loading]);
+
+  // Auto-save elke 30 seconden, met smart regels
   useEffect(() => {
     if (loading) return; // Don't auto-save while loading
-    
-    const interval = setInterval(() => {
-      if (progressPercentage > 10) { // Alleen auto-save als er substantiële data is
-        autoSave();
-      }
-    }, 30000); // 30 seconden
 
-    return () => clearInterval(interval);
-  }, [profileData, progressPercentage, loading]);
+    const onVisibility = () => {
+      pausedRef.current = document.hidden;
+      if (!document.hidden) {
+        idleSavesRef.current = 0; // resume fresh on focus
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onVisibility);
+    window.addEventListener('blur', onVisibility);
+
+    const interval = setInterval(async () => {
+      if (pausedRef.current) return;
+      if (progressPercentage <= 10) return;
+      // If there are changes, save and reset idle counter
+      if (isDirtyRef.current) {
+        await autoSave();
+        isDirtyRef.current = false;
+        idleSavesRef.current = 0;
+        return;
+      }
+      // No changes: allow limited idle autosaves, then pause until next change/focus
+      if (idleSavesRef.current < MAX_IDLE_SAVES) {
+        await autoSave();
+        idleSavesRef.current += 1;
+      }
+    }, AUTOSAVE_INTERVAL_MS);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onVisibility);
+      window.removeEventListener('blur', onVisibility);
+    };
+  }, [progressPercentage, loading, getToken]);
 
   const handleSubmit = async () => {
     try {
