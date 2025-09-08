@@ -71,6 +71,8 @@ class RiderProfile(Base):
     personality_style = Column(JSON, nullable=True)  # ["patient", "consistent", "playful"]
     discipline_preferences = Column(JSON, nullable=True)  # ["dressage", "jumping", "trail"]
     riding_styles = Column(JSON, nullable=True)  # ["bitloos", "hackamore", "western", ...]
+    # Skills
+    general_skills = Column(JSON, nullable=True)  # ["grondwerk","longeren_basis",...]
     # Activities
     activity_mode = Column(String(20), nullable=True)  # care_only | ride_or_care | ride_only
     activity_preferences = Column(JSON, nullable=True)  # ["verzorging","grondwerk","longeren","rijden","mennen"]

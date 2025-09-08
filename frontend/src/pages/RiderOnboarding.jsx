@@ -9,7 +9,7 @@ const RiderOnboarding = () => {
   const { isAuthenticated, getToken } = useKindeAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
-  const totalSteps = 8;
+  const totalSteps = 9;
 
   if (!isAuthenticated) {
     navigate('/');
@@ -66,6 +66,11 @@ const RiderOnboarding = () => {
     riding_goals: [],
     discipline_preferences: [],
     personality_style: []
+  });
+
+  // Vaardigheden
+  const [skills, setSkills] = useState({
+    general_skills: []
   });
 
   // Taken
@@ -129,6 +134,7 @@ const RiderOnboarding = () => {
     budget,
     experience,
     goals,
+    skills,
     tasks,
     preferences,
     media
@@ -176,6 +182,7 @@ const RiderOnboarding = () => {
         setBudget(transformedData.budget);
         setExperience(transformedData.experience);
         setGoals(transformedData.goals);
+        setSkills(transformedData.skills || { general_skills: [] });
         setTasks(transformedData.tasks);
         setPreferences(transformedData.preferences);
         setMedia(transformedData.media);
@@ -242,7 +249,7 @@ const RiderOnboarding = () => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-  }, [basicInfo, availability, budget, experience, goals, tasks, preferences, media, loading]);
+  }, [basicInfo, availability, budget, experience, goals, skills, tasks, preferences, media, loading]);
 
   // Auto-save elke 30 seconden, met smart regels
   useEffect(() => {
@@ -1019,11 +1026,88 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 7: Voorkeuren */}
+          {/* Step 7: Vaardigheden */}
           {currentStep === 7 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">7</span>
+                Vaardigheden
+              </h2>
+
+              {(() => {
+                const groups = [
+                  { title: 'Verzorging', items: [
+                    { key: 'algemene_verzorging', label: 'Algemene verzorging' },
+                    { key: 'poetsen', label: 'Poetsen' },
+                    { key: 'wassen', label: 'Wassen' },
+                    { key: 'invlechten', label: 'Invlechten' },
+                    { key: 'wondverzorging_basis', label: 'Wondverzorging (basis)' },
+                  ]},
+                  { title: 'Grondwerk & longeren', items: [
+                    { key: 'grondwerk', label: 'Grondwerk' },
+                    { key: 'longeren_basis', label: 'Longeren – basis' },
+                    { key: 'longeren_bijzet', label: 'Longeren – met bijzet' },
+                  ]},
+                  { title: 'Hanteren & laden', items: [
+                    { key: 'veilig_leiden', label: 'Leidt paard veilig' },
+                    { key: 'trailerladen', label: 'Trailerladen' },
+                    { key: 'schriktraining', label: 'Schriktraining' },
+                  ]},
+                  { title: 'Buiten & omgeving', items: [
+                    { key: 'wandelen_aan_de_hand', label: 'Wandelen aan de hand' },
+                    { key: 'verkeersmak_training_basis', label: 'Verkeersmak (basis)' },
+                  ]},
+                  { title: 'Training & herstel', items: [
+                    { key: 'conditietraining_basis', label: 'Conditietraining (basis)' },
+                    { key: 'revalidatie_volgen', label: 'Revalidatie-oefeningen volgen' },
+                  ]},
+                  { title: 'Stal & voeren', items: [
+                    { key: 'stalwerk', label: 'Stalwerk' },
+                    { key: 'voeren', label: 'Voeren' },
+                  ]},
+                  { title: 'Mennen', items: [
+                    { key: 'mennen_vaardigheid', label: 'Mennen (vaardigheid)' },
+                  ]},
+                ];
+                return (
+                  <div className="space-y-5">
+                    {groups.map(group => (
+                      <div key={group.title}>
+                        <span className="text-xs text-gray-500">{group.title}</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {group.items.map(item => {
+                            const active = skills.general_skills.includes(item.key);
+                            return (
+                              <button
+                                key={item.key}
+                                type="button"
+                                onClick={() => {
+                                  const has = skills.general_skills.includes(item.key);
+                                  const next = has
+                                    ? skills.general_skills.filter(k => k !== item.key)
+                                    : [...skills.general_skills, item.key];
+                                  setSkills({ ...skills, general_skills: next });
+                                }}
+                                className={`px-3 py-2 rounded-full border text-sm transition-colors ${
+                                  active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >{item.label}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Step 8: Voorkeuren */}
+          {currentStep === 8 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">8</span>
                 Voorkeuren
               </h2>
 
@@ -1154,12 +1238,12 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 8: Media & Voltooien */}
-          {currentStep === 8 && (
+          {/* Step 9: Media & Voltooien */}
+          {currentStep === 9 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">8</span>
-                Foto's & Video (Optioneel)
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">9</span>
+                Media & Voltooien
               </h2>
 
               <div className="space-y-6">

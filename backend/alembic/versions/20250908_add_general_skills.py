@@ -1,0 +1,25 @@
+"""
+add general_skills to rider_profiles
+
+Revision ID: 20250908_add_general_skills
+Revises: 20250908_add_activity_fields
+Create Date: 2025-09-08
+"""
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import sqlite
+
+# revision identifiers, used by Alembic.
+revision = '20250908_add_general_skills'
+down_revision = '20250908_add_activity_fields'
+branch_labels = None
+depends_on = None
+
+def upgrade():
+    with op.batch_alter_table('rider_profiles') as batch_op:
+        batch_op.add_column(sa.Column('general_skills', sa.JSON(), nullable=True))
+
+
+def downgrade():
+    with op.batch_alter_table('rider_profiles') as batch_op:
+        batch_op.drop_column('general_skills')

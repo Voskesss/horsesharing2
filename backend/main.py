@@ -242,6 +242,7 @@ async def create_or_update_rider_profile(
             goals=data.get('riding_goals', []) or [],
             discipline_preferences=data.get('discipline_preferences', []) or [],
             riding_styles=data.get('riding_styles', []) or [],
+            general_skills=data.get('general_skills', []) or [],
             personality_style=data.get('personality_style', []) or [],
             activity_mode=data.get('activity_mode'),
             activity_preferences=data.get('activity_preferences', []) or [],
@@ -602,6 +603,8 @@ async def create_or_update_rider_profile(
             existing_profile.discipline_preferences = payload.get('discipline_preferences')
         if 'personality_style' in payload and isinstance(payload.get('personality_style'), list):
             existing_profile.personality_style = payload.get('personality_style')
+        if 'general_skills' in payload and isinstance(payload.get('general_skills'), list):
+            existing_profile.general_skills = payload.get('general_skills')
 
         # 3) Comfort: map booleans and trail_rides discipline toggle
         comfort = payload.get('comfort_levels') if 'comfort_levels' in payload else (data.get('comfort_levels') or {})
@@ -762,6 +765,7 @@ async def get_rider_profile(
         },
         "riding_goals": profile.goals if profile.goals else [],
         "discipline_preferences": profile.discipline_preferences if profile.discipline_preferences else [],
+        "general_skills": profile.general_skills or [],
         "riding_styles": profile.riding_styles if profile.riding_styles else [],
         "activity_mode": profile.activity_mode,
         "activity_preferences": profile.activity_preferences if profile.activity_preferences else [],

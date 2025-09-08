@@ -116,6 +116,7 @@ export function transformProfileDataForAPI(profileData) {
     budget = {},
     experience = {},
     goals = {},
+    skills = {},
     tasks = {},
     preferences = {},
     media = {},
@@ -179,6 +180,9 @@ export function transformProfileDataForAPI(profileData) {
   add('riding_goals', Array.isArray(goals.riding_goals) ? goals.riding_goals : []);
   add('discipline_preferences', Array.isArray(goals.discipline_preferences) ? goals.discipline_preferences : []);
   add('personality_style', Array.isArray(goals.personality_style) ? goals.personality_style : []);
+
+  // Vaardigheden
+  add('general_skills', Array.isArray(skills.general_skills) ? skills.general_skills : []);
 
   // Taken
   add('willing_tasks', Array.isArray(tasks.willing_tasks) ? tasks.willing_tasks : []);
@@ -279,6 +283,9 @@ export function transformProfileDataFromAPI(apiData) {
       riding_goals: parseJSONArray(apiData.goals || apiData.riding_goals),
       discipline_preferences: parseJSONArray(apiData.discipline_preferences),
       personality_style: parseJSONArray(apiData.personality_style)
+    },
+    skills: {
+      general_skills: parseJSONArray(apiData.general_skills)
     },
     tasks: {
       willing_tasks: parseJSONArray(apiData.willing_tasks),
