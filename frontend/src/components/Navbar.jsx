@@ -1,8 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { createAPI } from '../utils/api';
 
 const Navbar = () => {
-  const { login, logout, isAuthenticated, user } = useKindeAuth();
+  const { login, logout, isAuthenticated, user, getToken } = useKindeAuth();
+  const [me, setMe] = useState(null);
+  const [meLoaded, setMeLoaded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadMe = async () => {
+      try {
+        if (!isAuthenticated) return;
+        const api = createAPI(getToken);
+        const data = await api.user.getMe();
+        if (mounted) {
+          setMe(data);
+          setMeLoaded(true);
+        }
+      } catch (e) {
+        // stil houden; we hebben fallbacks
+      }
+    };
+    loadMe();
+    return () => { mounted = false; };
+  }, [isAuthenticated, getToken]);
 
   return (
     <nav className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100 sticky top-0 z-50">
@@ -25,11 +47,20 @@ const Navbar = () => {
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-full flex items-center justify-center">
                     <span className="text-white font-semibold text-sm">
-                      {user?.given_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                      {(me?.name?.charAt(0)) || user?.email?.charAt(0) || 'U'}
                     </span>
                   </div>
                   <span className="text-gray-700 font-medium">
-                    Welkom, {user?.given_name || user?.email?.split('@')[0]}
+                    {meLoaded ? (
+                      // Gebruik DB-naam uit /auth/me, toon voornaam (eerste deel)
+                      (() => {
+                        const first = (me?.name || '').split(' ')[0] || (me?.name || '');
+                        return `Welkom, ${first}`;
+                      })()
+                    ) : (
+                      // nog niet geladen: geen flicker met SDK-naam
+                      'Welkom'
+                    )}
                   </span>
                 </div>
                 <button

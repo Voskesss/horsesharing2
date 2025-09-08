@@ -460,11 +460,19 @@ async def get_rider_profile(
     if not profile:
         raise HTTPException(status_code=404, detail="Rider profile not found")
     
+    # Bepaal voor/achternaam: eerste deel = voornaam, rest = achternaam
+    first = ""
+    last = ""
+    if current_user.name:
+        parts = current_user.name.split(" ", 1)
+        first = parts[0]
+        last = parts[1] if len(parts) > 1 else ""
+
     return {
         "id": profile.id,
         "user_id": profile.user_id,
-        "first_name": current_user.name.split()[0] if current_user.name else "",
-        "last_name": current_user.name.split()[1] if len(current_user.name.split()) > 1 else "",
+        "first_name": first,
+        "last_name": last,
         "phone": current_user.phone,
         # Field not in model yet; return empty string for now
         "date_of_birth": "",
