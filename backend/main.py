@@ -379,7 +379,37 @@ async def create_or_update_rider_profile(
                         value = json.dumps(value)
                     setattr(existing_profile, db_field, value)
                 print(f"Set {db_field} = {value}")
+        # Special mappings on UPDATE
+        data = profile_data.dict()
+        # 1) Date of birth -> date_of_birth + age
+        if data.get('date_of_birth'):
+            try:
+                from datetime import datetime, date
+                dob_str = data['date_of_birth']
+                try:
+                    dob = datetime.strptime(dob_str, "%d-%m-%Y").date()
+                except ValueError:
+                    dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+                existing_profile.date_of_birth = dob
+                today = date.today()
+                age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+                existing_profile.age = max(age, 0)
+            except Exception as e:
+                print(f"Failed to parse date_of_birth '{data.get('date_of_birth')}': {e}")
 
+        # 2) Availability: if arrays provided, compose dict storage
+        days_arr = data.get('available_days') or []
+        blocks_arr = data.get('available_time_blocks') or []
+        if isinstance(days_arr, list) and isinstance(blocks_arr, list) and (days_arr or blocks_arr):
+            existing_profile.available_days = {d: blocks_arr for d in days_arr}
+
+        # Commit changes
+        db.add(current_user)
+        db.add(existing_profile)
+        print("About to commit changes to database...")
+        db.commit()
+        db.refresh(existing_profile)
+        return {"message": "Profile updated successfully", "id": existing_profile.id}
 @app.get("/rider-profile")
 async def get_rider_profile(
     current_user: User = Depends(get_current_user),
