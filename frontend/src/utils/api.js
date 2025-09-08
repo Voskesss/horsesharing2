@@ -25,8 +25,14 @@ async function apiCall(endpoint, options = {}, token = null) {
       throw new Error('Not authenticated');
     }
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    console.error('Detailed API Error:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: error,
+      endpoint: endpoint,
+      method: config.method
+    });
     const errorMessage = error.detail || error.message || `HTTP ${response.status}`;
-    console.error('API Error:', errorMessage, error);
     throw new Error(errorMessage);
   }
 
@@ -105,63 +111,96 @@ export const userAPI = {
 // Transform frontend profile data naar backend format
 export function transformProfileDataForAPI(profileData) {
   const {
-    basicInfo,
-    availability,
-    budget,
-    experience,
-    goals,
-    tasks,
-    preferences,
-    media
-  } = profileData;
+    basicInfo = {},
+    availability = {},
+    budget = {},
+    experience = {},
+    goals = {},
+    tasks = {},
+    preferences = {},
+    media = {},
+  } = profileData || {};
 
-  return {
-    // Basis informatie
-    first_name: basicInfo.first_name || '',
-    last_name: basicInfo.last_name || '',
-    phone: basicInfo.phone || null,
-    date_of_birth: basicInfo.date_of_birth || null,
-    postcode: basicInfo.postcode || '',
-    max_travel_distance_km: basicInfo.max_travel_distance_km || 25,
-    transport_options: basicInfo.transport_options || [],
-    
-    // Beschikbaarheid
-    available_days: availability.available_days || [],
-    available_time_blocks: availability.available_time_blocks || [],
-    session_duration_min: availability.session_duration_min || 60,
-    session_duration_max: availability.session_duration_max || 120,
-    start_date: availability.start_date || null,
-    arrangement_duration: availability.arrangement_duration || 'ongoing',
-    
-    // Budget
-    budget_min_euro: budget.budget_min_euro || 0,
-    budget_max_euro: budget.budget_max_euro || 0,
-    budget_type: budget.budget_type || 'monthly',
-    
-    // Ervaring
-    experience_years: experience.experience_years || 0,
-    certification_level: experience.certification_level || '',
-    comfort_levels: experience.comfort_levels || {},
-    
-    // Doelen
-    riding_goals: goals.riding_goals || [],
-    discipline_preferences: goals.discipline_preferences || [],
-    personality_style: goals.personality_style || [],
-    
-    // Taken
-    willing_tasks: tasks.willing_tasks || [],
-    task_frequency: tasks.task_frequency || null,
-    
-    // Voorkeuren
-    material_preferences: preferences.material_preferences || {},
-    health_restrictions: preferences.health_restrictions || [],
-    insurance_coverage: preferences.insurance_coverage || false,
-    no_gos: preferences.no_gos || [],
-    
-    // Media
-    photos: media.photos || [],
-    video_intro_url: media.video_intro_url || null,
+  // Helper: voeg veld toe als het betekenisvol is
+  const out = {};
+  const add = (key, value, { allowFalse = false } = {}) => {
+    const isArray = Array.isArray(value);
+    const isString = typeof value === 'string';
+    const isNumber = typeof value === 'number';
+    const isBool = typeof value === 'boolean';
+    const isObject = value && typeof value === 'object' && !isArray;
+
+    if (value === undefined || value === null) return;
+    if (isArray && value.length === 0) return;
+    if (isString && value.trim() === '') return;
+    if (isNumber && Number.isNaN(value)) return;
+    if (isBool && !allowFalse && value === false) return;
+    if (isObject && Object.keys(value).length === 0) return;
+    out[key] = value;
   };
+
+  // Basis informatie
+  add('first_name', basicInfo.first_name);
+  add('last_name', basicInfo.last_name);
+  add('phone', basicInfo.phone);
+  add('date_of_birth', basicInfo.date_of_birth);
+  add('postcode', basicInfo.postcode);
+  add('max_travel_distance_km', basicInfo.max_travel_distance_km);
+  add('transport_options', Array.isArray(basicInfo.transport_options) ? basicInfo.transport_options : []);
+
+  // Beschikbaarheid
+  add('available_days', Array.isArray(availability.available_days) ? availability.available_days : []);
+  add('available_time_blocks', Array.isArray(availability.available_time_blocks) ? availability.available_time_blocks : []);
+  add('session_duration_min', availability.session_duration_min);
+  add('session_duration_max', availability.session_duration_max);
+  add('start_date', availability.start_date);
+  add('arrangement_duration', availability.arrangement_duration);
+
+  // Budget
+  add('budget_min_euro', budget.budget_min_euro);
+  add('budget_max_euro', budget.budget_max_euro);
+  add('budget_type', budget.budget_type);
+
+  // Ervaring
+  add('experience_years', experience.experience_years);
+  add('certification_level', experience.certification_level);
+  add('comfort_levels', experience.comfort_levels);
+
+  // Doelen
+  add('riding_goals', Array.isArray(goals.riding_goals) ? goals.riding_goals : []);
+  add('discipline_preferences', Array.isArray(goals.discipline_preferences) ? goals.discipline_preferences : []);
+  add('personality_style', Array.isArray(goals.personality_style) ? goals.personality_style : []);
+
+  // Taken
+  add('willing_tasks', Array.isArray(tasks.willing_tasks) ? tasks.willing_tasks : []);
+  add('task_frequency', tasks.task_frequency);
+
+  // Voorkeuren
+  add('material_preferences', preferences.material_preferences);
+  add('health_restrictions', preferences.health_restrictions);
+  // insurance_coverage: false is betekenisvol, dus allowFalse: true
+  add('insurance_coverage', preferences.insurance_coverage, { allowFalse: true });
+  add('no_gos', Array.isArray(preferences.no_gos) ? preferences.no_gos : []);
+
+  // Media
+  add('photos', Array.isArray(media.photos) ? media.photos : []);
+  add('video_intro_url', media.video_intro_url);
+
+  return out;
+}
+
+// Helper functie om JSON strings te parsen naar arrays
+function parseJSONArray(value, fallback = []) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
 }
 
 // Transform backend data naar frontend format
@@ -173,56 +212,56 @@ export function transformProfileDataFromAPI(apiData) {
       phone: apiData.phone || '',
       date_of_birth: apiData.date_of_birth || '',
       postcode: apiData.postcode || '',
-      max_travel_distance_km: apiData.max_travel_distance_km || 25,
-      transport_options: apiData.transport_options || []
+      max_travel_distance_km: apiData.max_travel_distance || apiData.max_travel_distance_km || 25,
+      transport_options: parseJSONArray(apiData.transport_options)
     },
     availability: {
-      available_days: apiData.available_days || [],
-      available_time_blocks: apiData.available_time_blocks || [],
+      available_days: parseJSONArray(apiData.available_days),
+      available_time_blocks: parseJSONArray(apiData.available_time_blocks),
       session_duration_min: apiData.session_duration_min || 60,
       session_duration_max: apiData.session_duration_max || 120,
       start_date: apiData.start_date || '',
-      arrangement_duration: apiData.arrangement_duration || 'ongoing'
+      arrangement_duration: apiData.duration_preference || apiData.arrangement_duration || 'ongoing'
     },
     budget: {
-      budget_min_euro: apiData.budget_min_euro || 150,
-      budget_max_euro: apiData.budget_max_euro || 250,
+      budget_min_euro: apiData.budget_min || apiData.budget_min_euro || 150,
+      budget_max_euro: apiData.budget_max || apiData.budget_max_euro || 250,
       budget_type: apiData.budget_type || 'monthly'
     },
     experience: {
-      experience_years: apiData.experience_years || 0,
-      certification_level: apiData.certification_level || '',
-      comfort_levels: apiData.comfort_levels || {
-        traffic: false,
-        outdoor_solo: false,
+      experience_years: apiData.years_experience || apiData.experience_years || 0,
+      certification_level: apiData.fnrs_level || apiData.certification_level || '',
+      comfort_levels: {
+        traffic: apiData.comfortable_with_traffic || false,
+        outdoor_solo: apiData.comfortable_solo_outside || false,
         nervous_horses: false,
         young_horses: false,
-        jumping_height: 0
+        jumping_height: apiData.max_jump_height || 0
       }
     },
     goals: {
-      riding_goals: apiData.riding_goals || [],
-      discipline_preferences: apiData.discipline_preferences || [],
-      personality_style: apiData.personality_style || []
+      riding_goals: parseJSONArray(apiData.goals || apiData.riding_goals),
+      discipline_preferences: parseJSONArray(apiData.discipline_preferences),
+      personality_style: parseJSONArray(apiData.personality_style)
     },
     tasks: {
-      willing_tasks: apiData.willing_tasks || [],
+      willing_tasks: parseJSONArray(apiData.willing_tasks),
       task_frequency: apiData.task_frequency || ''
     },
     preferences: {
-      material_preferences: apiData.material_preferences || {
-        bitless_ok: false,
+      material_preferences: {
+        bitless_ok: apiData.bitless_ok || false,
         spurs: false,
-        auxiliary_reins: false,
+        auxiliary_reins: apiData.training_aids_ok || false,
         own_helmet: true
       },
-      health_restrictions: apiData.health_restrictions || [],
-      insurance_coverage: apiData.insurance_coverage || false,
-      no_gos: apiData.no_gos || []
+      health_restrictions: parseJSONArray(apiData.health_limitations || apiData.health_restrictions),
+      insurance_coverage: apiData.has_insurance || apiData.insurance_coverage || false,
+      no_gos: parseJSONArray(apiData.no_gos)
     },
     media: {
-      photos: apiData.photos || [],
-      video_intro_url: apiData.video_intro_url || ''
+      photos: parseJSONArray(apiData.photos),
+      video_intro_url: apiData.video_intro || apiData.video_intro_url || ''
     }
   };
 }

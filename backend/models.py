@@ -35,6 +35,7 @@ class RiderProfile(Base):
     # Location & Travel
     postcode = Column(String(10), nullable=False)
     max_travel_distance = Column(Integer, nullable=False)  # km
+    transport_options = Column(JSON, nullable=True)  # ["auto", "openbaar_vervoer", "fiets", "te_voet"]
     
     # Availability
     available_days = Column(JSON, nullable=False)  # {"monday": ["morning", "afternoon"], ...}

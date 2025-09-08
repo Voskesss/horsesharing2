@@ -67,7 +67,7 @@ const RiderOnboarding = () => {
   // Taken
   const [tasks, setTasks] = useState({
     willing_tasks: [],
-    task_frequency: {}
+    task_frequency: ''
   });
 
   // Voorkeuren
@@ -136,7 +136,12 @@ const RiderOnboarding = () => {
       try {
         const api = createAPI(getToken);
         const apiData = await api.riderProfile.get();
+        
+        console.log('🔍 RAW API DATA:', JSON.stringify(apiData, null, 2));
+        
         const transformedData = transformProfileDataFromAPI(apiData);
+        
+        console.log('🔄 TRANSFORMED DATA:', JSON.stringify(transformedData, null, 2));
         
         // Update state with existing data
         setBasicInfo(transformedData.basicInfo);
@@ -148,15 +153,49 @@ const RiderOnboarding = () => {
         setPreferences(transformedData.preferences);
         setMedia(transformedData.media);
         
-        console.log('Existing profile loaded successfully');
+        console.log('✅ Profile state updated successfully');
+        console.log('📋 Current basicInfo state:', transformedData.basicInfo);
+        console.log('🎯 Current goals state:', transformedData.goals);
+        
       } catch (error) {
-        console.log('No existing profile found, starting fresh');
+        console.log('❌ Error loading profile:', error);
+        console.log('Starting fresh profile');
       } finally {
         setLoading(false);
       }
     };
 
     loadExistingProfile();
+  }, [getToken]);
+
+  // Prefill naam/telefoon vanuit Kinde (auth/me) zonder bestaande invoer te overschrijven
+  useEffect(() => {
+    const prefillFromKinde = async () => {
+      try {
+        const api = createAPI(getToken);
+        const me = await api.user.getMe();
+        const fullName = (me?.name || '').trim();
+        let first = '';
+        let last = '';
+        if (fullName) {
+          const parts = fullName.split(' ');
+          first = parts[0] || '';
+          last = parts.length > 1 ? parts.slice(1).join(' ') : '';
+        }
+
+        setBasicInfo(prev => ({
+          ...prev,
+          first_name: prev.first_name || first,
+          last_name: prev.last_name || last,
+          phone: prev.phone || (me?.phone || ''),
+        }));
+        console.log('👤 Prefilled from Kinde:', { first, last, phone: me?.phone });
+      } catch (e) {
+        console.log('Skipping Kinde prefill (not authenticated or failed):', e?.message || e);
+      }
+    };
+
+    prefillFromKinde();
   }, [getToken]);
 
   // Auto-save elke 30 seconden als er data is
