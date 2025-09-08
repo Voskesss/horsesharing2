@@ -544,6 +544,46 @@ async def create_or_update_rider_profile(
         except Exception:
             pass
 
+        # 1) Basisvelden direct uit payload mappen (alleen als meegegeven)
+        direct_map = {
+            'postcode': 'postcode',
+            'house_number': 'house_number',
+            'city': 'city',
+            'max_travel_distance_km': 'max_travel_distance',
+            'transport_options': 'transport_options',
+            'session_duration_min': 'session_duration_min',
+            'session_duration_max': 'session_duration_max',
+            'start_date': 'start_date',
+            'arrangement_duration': 'duration_preference',
+            'budget_min_euro': 'budget_min',
+            'budget_max_euro': 'budget_max',
+            'experience_years': 'years_experience',
+            'certifications': 'certifications',
+            'riding_styles': 'riding_styles',
+            'personality_style': 'personality_style',
+            'willing_tasks': 'willing_tasks',
+            'task_frequency': 'task_frequency',
+            'photos': 'photos',
+            'video_intro_url': 'video_intro',
+            'insurance_coverage': 'has_insurance',
+            'health_restrictions': 'health_limitations',
+            'no_gos': 'no_gos',
+        }
+        for src, dest in direct_map.items():
+            if src in payload:
+                val = payload.get(src)
+                # type conversies
+                if dest in ('max_travel_distance', 'session_duration_min', 'session_duration_max', 'budget_min', 'budget_max', 'years_experience'):
+                    try:
+                        val = int(val) if val is not None else None
+                    except Exception:
+                        pass
+                if dest in ('has_insurance',):
+                    val = bool(val)
+                if dest in ('health_limitations', 'no_gos') and isinstance(val, list):
+                    val = json.dumps(val)
+                setattr(existing_profile, dest, val)
+
         # 2) Availability
         if 'available_schedule' in payload and isinstance(payload.get('available_schedule'), dict):
             # prefer per-day schedule if provided
@@ -554,6 +594,14 @@ async def create_or_update_rider_profile(
             blocks_arr = payload.get('available_time_blocks') if 'available_time_blocks' in payload else (data.get('available_time_blocks') or [])
             if isinstance(days_arr, list) and isinstance(blocks_arr, list) and (days_arr or blocks_arr):
                 existing_profile.available_days = {d: blocks_arr for d in days_arr}
+
+        # 2b) Goals/Discipline/Personality explicit updates if provided
+        if 'riding_goals' in payload and isinstance(payload.get('riding_goals'), list):
+            existing_profile.goals = payload.get('riding_goals')
+        if 'discipline_preferences' in payload and isinstance(payload.get('discipline_preferences'), list):
+            existing_profile.discipline_preferences = payload.get('discipline_preferences')
+        if 'personality_style' in payload and isinstance(payload.get('personality_style'), list):
+            existing_profile.personality_style = payload.get('personality_style')
 
         # 3) Comfort: map booleans and trail_rides discipline toggle
         comfort = payload.get('comfort_levels') if 'comfort_levels' in payload else (data.get('comfort_levels') or {})
@@ -572,7 +620,8 @@ async def create_or_update_rider_profile(
             existing_profile.comfortable_with_young_horses = bool(comfort['young_horses'])
         if 'stallions' in comfort:
             existing_profile.comfortable_with_stallions = bool(comfort['stallions'])
-        if 'trail_rides' in comfort:
+        # Only adjust 'buitenritten' from trail_rides if discipline_preferences was NOT explicitly provided
+        if 'trail_rides' in comfort and 'discipline_preferences' not in payload:
             trails_on = bool(comfort['trail_rides'])
             dp = (existing_profile.discipline_preferences or [])
             if trails_on and 'buitenritten' not in dp:
@@ -588,6 +637,35 @@ async def create_or_update_rider_profile(
             existing_profile.activity_preferences = payload.get('activity_preferences')
         if 'mennen_experience' in payload:
             existing_profile.mennen_experience = payload.get('mennen_experience')
+
+        # 4b) Normalize by activity_mode to keep data consistent
+        mode = existing_profile.activity_mode
+        care_keys = ['verzorging','grondwerk','longeren','hand_walking','pasture_turnout','medical_assist']
+        ride_keys = ['buitenritten','dressuur_training','springen_training']
+        if mode == 'care_only':
+            # Keep only care subitems; clear ride-related meta
+            prefs = existing_profile.activity_preferences or []
+            existing_profile.activity_preferences = [k for k in prefs if k in care_keys]
+            existing_profile.mennen_experience = None
+            # Goals/discipline not applicable
+            existing_profile.goals = []
+            existing_profile.discipline_preferences = []
+        elif mode == 'ride_only':
+            # No subactivities; no mennen
+            existing_profile.activity_preferences = []
+            existing_profile.mennen_experience = None
+            # Goals/discipline remain as selected by user
+        elif mode == 'drive_only':
+            # Only mennen path; no subactivities, no riding goals/discipline
+            existing_profile.activity_preferences = []
+            existing_profile.goals = []
+            existing_profile.discipline_preferences = []
+        elif mode == 'ride_or_care':
+            # Allow both care and ride subactivities, but drop anything unknown
+            prefs = existing_profile.activity_preferences or []
+            allowed = set(care_keys + ride_keys)
+            existing_profile.activity_preferences = [k for k in prefs if k in allowed]
+            existing_profile.mennen_experience = None
 
         # 5) Material preferences on UPDATE
         material = payload.get('material_preferences') if 'material_preferences' in payload else (data.get('material_preferences') or {})
