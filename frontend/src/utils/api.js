@@ -231,12 +231,24 @@ export function transformProfileDataFromAPI(apiData) {
       experience_years: apiData.years_experience || apiData.experience_years || 0,
       certification_level: apiData.fnrs_level || apiData.certification_level || '',
       certifications: Array.isArray(apiData.certifications) ? apiData.certifications : [],
-      comfort_levels: {
+      // Prefer the nested comfort_levels object from API for full fidelity
+      comfort_levels: apiData.comfort_levels ? {
+        traffic: !!apiData.comfort_levels.traffic,
+        outdoor_solo: !!apiData.comfort_levels.outdoor_solo,
+        nervous_horses: !!apiData.comfort_levels.nervous_horses,
+        young_horses: !!apiData.comfort_levels.young_horses,
+        stallions: !!apiData.comfort_levels.stallions,
+        trail_rides: !!apiData.comfort_levels.trail_rides,
+        jumping_height: apiData.comfort_levels.jumping_height || 0,
+      } : {
+        // Fallback for older responses
         traffic: apiData.comfortable_with_traffic || false,
         outdoor_solo: apiData.comfortable_solo_outside || false,
         nervous_horses: false,
         young_horses: false,
-        jumping_height: apiData.max_jump_height || 0
+        stallions: false,
+        trail_rides: Array.isArray(apiData.discipline_preferences) ? apiData.discipline_preferences.includes('buitenritten') : false,
+        jumping_height: apiData.max_jump_height || 0,
       }
     },
     goals: {

@@ -1,0 +1,28 @@
+"""
+Add comfort fields to rider_profiles
+
+Revision ID: 20250908_add_comfort_fields
+Revises: 20250908_add_certifications
+Create Date: 2025-09-08
+"""
+from alembic import op
+import sqlalchemy as sa
+
+# revision identifiers, used by Alembic.
+revision = '20250908_add_comfort_fields'
+down_revision = '20250908_add_certifications'
+branch_labels = None
+depends_on = None
+
+def upgrade():
+    with op.batch_alter_table('rider_profiles') as batch_op:
+        batch_op.add_column(sa.Column('comfortable_with_nervous_horses', sa.Boolean(), nullable=True))
+        batch_op.add_column(sa.Column('comfortable_with_young_horses', sa.Boolean(), nullable=True))
+        batch_op.add_column(sa.Column('comfortable_with_stallions', sa.Boolean(), nullable=True))
+
+
+def downgrade():
+    with op.batch_alter_table('rider_profiles') as batch_op:
+        batch_op.drop_column('comfortable_with_stallions')
+        batch_op.drop_column('comfortable_with_young_horses')
+        batch_op.drop_column('comfortable_with_nervous_horses')

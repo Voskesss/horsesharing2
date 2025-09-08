@@ -603,56 +603,35 @@ const RiderOnboarding = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">Comfort levels</label>
-                <div className="space-y-3">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={experience.comfort_levels.traffic}
-                      onChange={(e) => setExperience({
-                        ...experience, 
-                        comfort_levels: {...experience.comfort_levels, traffic: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Comfortabel in verkeer</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={experience.comfort_levels.outdoor_solo}
-                      onChange={(e) => setExperience({
-                        ...experience, 
-                        comfort_levels: {...experience.comfort_levels, outdoor_solo: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Alleen buitenritten</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={experience.comfort_levels.nervous_horses}
-                      onChange={(e) => setExperience({
-                        ...experience, 
-                        comfort_levels: {...experience.comfort_levels, nervous_horses: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Nerveuze paarden</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={experience.comfort_levels.young_horses}
-                      onChange={(e) => setExperience({
-                        ...experience, 
-                        comfort_levels: {...experience.comfort_levels, young_horses: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Jonge paarden</span>
-                  </label>
+                <label className="block text-sm font-medium text-gray-700 mb-4">Ik ben comfortabel met:</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {[
+                    { key: 'traffic', label: '(Druk) verkeer' },
+                    { key: 'trail_rides', label: 'Buitenritten' },
+                    { key: 'nervous_horses', label: 'Nerveuze paarden' },
+                    { key: 'young_horses', label: 'Jonge paarden' },
+                    { key: 'stallions', label: 'Hengsten' },
+                    { key: 'outdoor_solo', label: 'Alleen rijden' },
+                  ].map(item => {
+                    const active = !!experience.comfort_levels[item.key];
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setExperience({
+                          ...experience,
+                          comfort_levels: { ...experience.comfort_levels, [item.key]: !active }
+                        })}
+                        className={`px-3 py-2 rounded-full border text-sm transition-colors ${
+                          active
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

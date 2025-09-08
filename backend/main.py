@@ -249,6 +249,23 @@ async def create_or_update_rider_profile(
                 new_profile.max_jump_height = int(comfort['jumping_height'])
             except Exception:
                 pass
+        if 'nervous_horses' in comfort:
+            new_profile.comfortable_with_nervous_horses = bool(comfort['nervous_horses'])
+        if 'young_horses' in comfort:
+            new_profile.comfortable_with_young_horses = bool(comfort['young_horses'])
+        if 'stallions' in comfort:
+            new_profile.comfortable_with_stallions = bool(comfort['stallions'])
+
+        # Trail rides toggle via discipline_preferences
+        if 'trail_rides' in comfort:
+            trails_on = bool(comfort['trail_rides'])
+            dp = (data.get('discipline_preferences') or [])
+            # ensure buitenritten present/absent
+            if trails_on and 'buitenritten' not in dp:
+                dp = dp + ['buitenritten']
+            if (not trails_on) and 'buitenritten' in dp:
+                dp = [x for x in dp if x != 'buitenritten']
+            new_profile.discipline_preferences = dp
 
         # Certifications mapping
         certifications = data.get('certifications', [])
@@ -492,6 +509,32 @@ async def create_or_update_rider_profile(
         if isinstance(days_arr, list) and isinstance(blocks_arr, list) and (days_arr or blocks_arr):
             existing_profile.available_days = {d: blocks_arr for d in days_arr}
 
+        # 3) Comfort: map booleans and trail_rides discipline toggle
+        comfort = data.get('comfort_levels') or {}
+        if 'traffic' in comfort:
+            existing_profile.comfortable_with_traffic = bool(comfort['traffic'])
+        if 'outdoor_solo' in comfort:
+            existing_profile.comfortable_solo_outside = bool(comfort['outdoor_solo'])
+        if 'jumping_height' in comfort and comfort['jumping_height'] is not None:
+            try:
+                existing_profile.max_jump_height = int(comfort['jumping_height'])
+            except Exception:
+                pass
+        if 'nervous_horses' in comfort:
+            existing_profile.comfortable_with_nervous_horses = bool(comfort['nervous_horses'])
+        if 'young_horses' in comfort:
+            existing_profile.comfortable_with_young_horses = bool(comfort['young_horses'])
+        if 'stallions' in comfort:
+            existing_profile.comfortable_with_stallions = bool(comfort['stallions'])
+        if 'trail_rides' in comfort:
+            trails_on = bool(comfort['trail_rides'])
+            dp = (existing_profile.discipline_preferences or [])
+            if trails_on and 'buitenritten' not in dp:
+                dp = dp + ['buitenritten']
+            if (not trails_on) and 'buitenritten' in dp:
+                dp = [x for x in dp if x != 'buitenritten']
+            existing_profile.discipline_preferences = dp
+
         # Commit changes
         db.add(current_user)
         db.add(existing_profile)
@@ -569,8 +612,10 @@ async def get_rider_profile(
         "comfort_levels": {
             "traffic": profile.comfortable_with_traffic,
             "outdoor_solo": profile.comfortable_solo_outside,
-            "nervous_horses": False,  # Not in current model
-            "young_horses": False,    # Not in current model
+            "nervous_horses": bool(profile.comfortable_with_nervous_horses),
+            "young_horses": bool(profile.comfortable_with_young_horses),
+            "stallions": bool(profile.comfortable_with_stallions),
+            "trail_rides": bool('buitenritten' in (profile.discipline_preferences or [])),
             "jumping_height": profile.max_jump_height or 0
         },
         "riding_goals": profile.goals if profile.goals else [],
