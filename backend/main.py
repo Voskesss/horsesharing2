@@ -31,14 +31,35 @@ async def health_check():
     return {"status": "healthy", "service": "horsesharing-api"}
 
 @app.get("/auth/me")
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(request: Request, current_user: User = Depends(get_current_user)):
     """Get current authenticated user info"""
+    # Probeer Kinde claims op te halen voor leading weergave
+    kinde_claims = {}
+    try:
+        auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1]
+            # Lazy import to avoid circular
+            from auth import verify_kinde_token
+            kinde_claims = verify_kinde_token(token) or {}
+    except Exception:
+        kinde_claims = {}
+
+    # Haal mogelijke naamvelden uit claims
+    given = (kinde_claims.get("given_name") or kinde_claims.get("first_name") or "").strip()
+    family = (kinde_claims.get("family_name") or kinde_claims.get("last_name") or "").strip()
+    full_claim_name = (given + (" " + family if family else "")).strip() or (kinde_claims.get("name") or "").strip()
+
     return {
         "id": current_user.id,
         "kinde_id": current_user.kinde_id,
         "email": current_user.email,
         "name": current_user.name,
         "phone": current_user.phone,
+        # Extra: wat Kinde zelf zegt (leading)
+        "kinde_given_name": given,
+        "kinde_family_name": family,
+        "kinde_full_name": full_claim_name,
         "onboarding_completed": current_user.onboarding_completed,
         "profile_type_chosen": current_user.profile_type_chosen,
         "has_rider_profile": current_user.rider_profile is not None,
@@ -234,18 +255,24 @@ async def create_or_update_rider_profile(
                     m2m_client_id = os.getenv("KINDE_M2M_CLIENT_ID")
                     m2m_client_secret = os.getenv("KINDE_M2M_CLIENT_SECRET")
                     kinde_domain = os.getenv("KINDE_DOMAIN")
+                    kinde_audience = os.getenv("KINDE_AUDIENCE")
+                    kinde_scope = os.getenv("KINDE_M2M_SCOPE")
                     if m2m_client_id and m2m_client_secret and kinde_domain:
+                        print(f"Kinde M2M token: audience={kinde_audience}, scope={kinde_scope}")
                         token_resp = requests.post(
                             f"{kinde_domain}/oauth2/token",
                             data={
                                 "grant_type": "client_credentials",
                                 "client_id": m2m_client_id,
                                 "client_secret": m2m_client_secret,
-                                # audience is optional per Kinde tenant config; omit or add if provided
+                                **({"audience": kinde_audience} if kinde_audience else {}),
+                                **({"scope": kinde_scope} if kinde_scope else {}),
                             },
                             headers={"Content-Type": "application/x-www-form-urlencoded"},
                             timeout=10,
                         )
+                        if not token_resp.ok:
+                            print(f"Kinde M2M token FAILED status={token_resp.status_code} body={token_resp.text}")
                         if token_resp.ok:
                             access_token = token_resp.json().get("access_token")
                             # Split voor- en achternaam indien mogelijk
@@ -254,16 +281,33 @@ async def create_or_update_rider_profile(
                             family = parts[1] if len(parts) > 1 else ""
                             # Kinde Management API: update user profiel
                             # API pad kan per versie verschillen; we proberen generiek endpoint
-                            requests.patch(
-                                f"{kinde_domain}/api/v1/users/{current_user.kinde_id}",
+                            # Gebruik query-param endpoint volgens docs: /api/v1/user?id=<user_id>
+                            base_endpoint = f"{kinde_domain}/api/v1/user"
+                            # Probe met GET en params
+                            try:
+                                probe = requests.get(base_endpoint, params={"id": current_user.kinde_id}, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+                                print(f"Kinde GET probe {base_endpoint}?id=... -> {probe.status_code}")
+                            except Exception as _:
+                                probe = None
+                            print(f"Kinde name PATCH endpoint: {base_endpoint}?id={current_user.kinde_id}")
+                            print(f"Kinde name PATCH for user={current_user.kinde_id} given_name='{given}' family_name='{family}' name='{new_name}'")
+                            patch_resp = requests.patch(
+                                base_endpoint,
                                 json={
+                                    # Stuur beide varianten voor maximale compatibiliteit
+                                    "first_name": given,
+                                    "last_name": family,
                                     "given_name": given,
                                     "family_name": family,
                                     "name": new_name,
                                 },
+                                params={"id": current_user.kinde_id},
                                 headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
                                 timeout=10,
                             )
+                            print(f"Kinde name PATCH status={patch_resp.status_code} body={patch_resp.text}")
+                    else:
+                        print("Skipping Kinde name sync: missing M2M env variables or KINDE_DOMAIN")
                 except Exception as _:
                     # Niet fatal; doorgaan met lokale update
                     pass
@@ -275,27 +319,47 @@ async def create_or_update_rider_profile(
                 m2m_client_id = os.getenv("KINDE_M2M_CLIENT_ID")
                 m2m_client_secret = os.getenv("KINDE_M2M_CLIENT_SECRET")
                 kinde_domain = os.getenv("KINDE_DOMAIN")
+                kinde_audience = os.getenv("KINDE_AUDIENCE")
+                kinde_scope = os.getenv("KINDE_M2M_SCOPE")
                 if m2m_client_id and m2m_client_secret and kinde_domain:
+                    print(f"Kinde M2M token (phone): audience={kinde_audience}, scope={kinde_scope}")
                     token_resp = requests.post(
                         f"{kinde_domain}/oauth2/token",
                         data={
                             "grant_type": "client_credentials",
                             "client_id": m2m_client_id,
                             "client_secret": m2m_client_secret,
+                            **({"audience": kinde_audience} if kinde_audience else {}),
+                            **({"scope": kinde_scope} if kinde_scope else {}),
                         },
                         headers={"Content-Type": "application/x-www-form-urlencoded"},
                         timeout=10,
                     )
+                    if not token_resp.ok:
+                        print(f"Kinde M2M token FAILED status={token_resp.status_code} body={token_resp.text}")
                     if token_resp.ok:
                         access_token = token_resp.json().get("access_token")
-                        requests.patch(
-                            f"{kinde_domain}/api/v1/users/{current_user.kinde_id}",
+                        # Endpoint met query param
+                        base_endpoint = f"{kinde_domain}/api/v1/user"
+                        try:
+                            probe = requests.get(base_endpoint, params={"id": current_user.kinde_id}, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+                            print(f"Kinde GET probe {base_endpoint}?id=... -> {probe.status_code}")
+                        except Exception as _:
+                            probe = None
+                        print(f"Kinde phone PATCH endpoint: {base_endpoint}?id={current_user.kinde_id}")
+                        print(f"Kinde phone PATCH for user={current_user.kinde_id} phone='{current_user.phone}'")
+                        patch_resp = requests.patch(
+                            base_endpoint,
                             json={
                                 "phone_number": current_user.phone,
                             },
+                            params={"id": current_user.kinde_id},
                             headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
                             timeout=10,
                         )
+                        print(f"Kinde phone PATCH status={patch_resp.status_code} body={patch_resp.text}")
+                else:
+                    print("Skipping Kinde phone sync: missing M2M env variables or KINDE_DOMAIN")
             except Exception:
                 pass
 
@@ -402,14 +466,17 @@ async def get_rider_profile(
         "first_name": current_user.name.split()[0] if current_user.name else "",
         "last_name": current_user.name.split()[1] if len(current_user.name.split()) > 1 else "",
         "phone": current_user.phone,
-        "date_of_birth": profile.date_of_birth,
+        # Field not in model yet; return empty string for now
+        "date_of_birth": "",
         "postcode": profile.postcode,
         "max_travel_distance_km": profile.max_travel_distance,
         "transport_options": profile.transport_options if profile.transport_options else [],
         "available_days": profile.available_days if profile.available_days else [],
-        "available_time_blocks": profile.available_time_blocks if profile.available_time_blocks else [],
-        "session_duration_min": profile.session_duration_min if profile.session_duration_min else 60,
-        "session_duration_max": profile.session_duration_max if profile.session_duration_max else 120,
+        # Not in model yet
+        "available_time_blocks": [],
+        # Not in model yet
+        "session_duration_min": 60,
+        "session_duration_max": 120,
         "start_date": profile.start_date,
         "arrangement_duration": profile.duration_preference,
         "budget_min_euro": profile.budget_min,
@@ -435,9 +502,10 @@ async def get_rider_profile(
             "auxiliary_reins": profile.training_aids_ok,
             "own_helmet": True  # Default
         },
-        "health_restrictions": profile.health_limitations if profile.health_limitations else [],
+        # health_limitations/no_gos are TEXT that may contain JSON string; parse to list if possible
+        "health_restrictions": (json.loads(profile.health_limitations) if isinstance(profile.health_limitations, str) and profile.health_limitations else []),
         "insurance_coverage": profile.has_insurance,
-        "no_gos": profile.no_gos if profile.no_gos else [],
+        "no_gos": (json.loads(profile.no_gos) if isinstance(profile.no_gos, str) and profile.no_gos else []),
         "photos": profile.photos if profile.photos else [],
         "video_intro_url": profile.video_intro,
         "created_at": profile.created_at,

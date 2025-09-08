@@ -45,6 +45,11 @@ def get_current_user(
     """Get current authenticated user"""
     token = credentials.credentials
     kinde_user = verify_kinde_token(token)
+    # Debug: laat zien welke velden Kinde teruggeeft (eenmalig nuttig bij integratie)
+    try:
+        print(f"Kinde user keys: {list(kinde_user.keys())}")
+    except Exception:
+        pass
     
     # Get or create user in our database
     user = db.query(User).filter(User.kinde_id == kinde_user["id"]).first()
@@ -60,7 +65,32 @@ def get_current_user(
         db.add(user)
         db.commit()
         db.refresh(user)
-    
+    else:
+        # Kinde leading: sync DB with token claims if different
+        # Fallbacks: sommige tenants gebruiken first_name/last_name i.p.v. given_name/family_name
+        given = (kinde_user.get("given_name") or kinde_user.get("first_name") or "").strip()
+        family = (kinde_user.get("family_name") or kinde_user.get("last_name") or "").strip()
+        if not given and not family:
+            # laatste redmiddel: splits volledige naam
+            full = (kinde_user.get("name") or "").strip()
+            if full:
+                parts = full.split(" ", 1)
+                given = parts[0]
+                family = parts[1] if len(parts) > 1 else ""
+        token_name = (given + (" " + family if family else "")).strip()
+        token_phone = kinde_user.get("phone_number")
+
+        updated = False
+        if token_name and token_name != (user.name or "").strip():
+            user.name = token_name
+            updated = True
+        if token_phone and token_phone != (user.phone or ""):
+            user.phone = token_phone
+            updated = True
+        if updated:
+            db.commit()
+            db.refresh(user)
+
     return user
 
 def get_optional_user(
