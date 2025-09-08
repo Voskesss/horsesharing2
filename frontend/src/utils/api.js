@@ -261,13 +261,19 @@ export function transformProfileDataFromAPI(apiData) {
       task_frequency: apiData.task_frequency || ''
     },
     preferences: {
-      material_preferences: {
-        bitless_ok: apiData.bitless_ok || false,
-        spurs: false,
-        auxiliary_reins: apiData.training_aids_ok || false,
+      material_preferences: apiData.material_preferences ? {
+        bitless_ok: !!apiData.material_preferences.bitless_ok,
+        spurs: !!apiData.material_preferences.spurs,
+        auxiliary_reins: !!apiData.material_preferences.auxiliary_reins,
+        own_helmet: apiData.material_preferences.own_helmet !== undefined ? !!apiData.material_preferences.own_helmet : true,
+      } : {
+        // Fallback op oudere top-level velden
+        bitless_ok: !!apiData.bitless_ok,
+        spurs: !!apiData.spurs_ok,
+        auxiliary_reins: !!apiData.training_aids_ok,
         own_helmet: true,
       },
-      health_restrictions: parseJSONArray(apiData.health_limitations),
+      health_restrictions: parseJSONArray(apiData.health_restrictions) || parseJSONArray(apiData.health_limitations),
       insurance_coverage: apiData.has_insurance || false,
       no_gos: parseJSONArray(apiData.no_gos),
       riding_styles: parseJSONArray(apiData.riding_styles)

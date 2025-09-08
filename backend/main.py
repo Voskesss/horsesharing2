@@ -279,6 +279,8 @@ async def create_or_update_rider_profile(
             new_profile.bitless_ok = bool(material['bitless_ok'])
         if 'auxiliary_reins' in material and material['auxiliary_reins'] is not None:
             new_profile.training_aids_ok = bool(material['auxiliary_reins'])
+        if 'spurs' in material and material['spurs'] is not None:
+            new_profile.spurs_ok = bool(material['spurs'])
 
         # Date of birth -> date + age
         dob_str = data.get('date_of_birth')
@@ -538,6 +540,15 @@ async def create_or_update_rider_profile(
                 dp = [x for x in dp if x != 'buitenritten']
             existing_profile.discipline_preferences = dp
 
+        # 4) Material preferences on UPDATE
+        material = data.get('material_preferences') or {}
+        if 'bitless_ok' in material:
+            existing_profile.bitless_ok = bool(material['bitless_ok'])
+        if 'auxiliary_reins' in material and material['auxiliary_reins'] is not None:
+            existing_profile.training_aids_ok = bool(material['auxiliary_reins'])
+        if 'spurs' in material and material['spurs'] is not None:
+            existing_profile.spurs_ok = bool(material['spurs'])
+
         # Commit changes
         db.add(current_user)
         db.add(existing_profile)
@@ -629,9 +640,9 @@ async def get_rider_profile(
         "task_frequency": profile.task_frequency,
         "material_preferences": {
             "bitless_ok": profile.bitless_ok,
-            "spurs": False,  # Not in current model
+            "spurs": bool(getattr(profile, 'spurs_ok', False)),
             "auxiliary_reins": profile.training_aids_ok,
-            "own_helmet": True  # Default
+            "own_helmet": True  # UI-only default
         },
         # health_limitations/no_gos are TEXT that may contain JSON string; parse to list if possible
         "health_restrictions": (json.loads(profile.health_limitations) if isinstance(profile.health_limitations, str) and profile.health_limitations else []),

@@ -84,6 +84,18 @@ const RiderOnboarding = () => {
     riding_styles: []
   });
 
+  // Gezondheid gating en vrije tekst (afgeleid van preferences)
+  const [hasHealthRestrictions, setHasHealthRestrictions] = useState(false);
+  const [healthOther, setHealthOther] = useState('');
+
+  // Initieer gating en 'anders' na load van profiel
+  useEffect(() => {
+    const hr = preferences.health_restrictions || [];
+    setHasHealthRestrictions(hr.length > 0);
+    const otherItem = hr.find(i => typeof i === 'string' && i.startsWith('anders:'));
+    setHealthOther(otherItem ? otherItem.replace(/^anders:\s?/, '') : '');
+  }, [preferences.health_restrictions]);
+
   // Media
   const [media, setMedia] = useState({
     photos: [],
@@ -243,7 +255,7 @@ const RiderOnboarding = () => {
   const ridingGoals = ['recreatie', 'training', 'wedstrijden', 'therapie', 'sociale_contacten'];
   const disciplines = ['dressuur', 'springen', 'eventing', 'western', 'buitenritten', 'natural_horsemanship'];
   const availableTasks = ['uitrijden', 'voeren', 'poetsen', 'longeren', 'stalwerk', 'transport'];
-  const healthRestrictions = ['hoogtevrees', 'rugproblemen', 'knieproblemen', 'allergieën', 'medicatie'];
+  const healthRestrictions = ['hooikoorts', 'rugproblemen', 'knieproblemen', 'allergieën', 'medicatie'];
   const noGos = ['drukke_stallen', 'avond_afspraken', 'weekenden', 'slecht_weer', 'grote_groepen'];
   const personalityStyles = ['rustig', 'energiek', 'geduldig', 'assertief', 'flexibel', 'gestructureerd'];
   // Certificeringen (NL): FNRS, KNHS Dressuur en Springen
@@ -815,77 +827,96 @@ const RiderOnboarding = () => {
               </h2>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">Materiaal voorkeuren</label>
-                <div className="space-y-3">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={preferences.material_preferences.bitless_ok}
-                      onChange={(e) => setPreferences({
-                        ...preferences, 
-                        material_preferences: {...preferences.material_preferences, bitless_ok: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Bitloos rijden OK</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={preferences.material_preferences.spurs}
-                      onChange={(e) => setPreferences({
-                        ...preferences, 
-                        material_preferences: {...preferences.material_preferences, spurs: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Sporen gebruiken</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={preferences.material_preferences.auxiliary_reins}
-                      onChange={(e) => setPreferences({
-                        ...preferences, 
-                        material_preferences: {...preferences.material_preferences, auxiliary_reins: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Hulpteugels OK</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={preferences.material_preferences.own_helmet}
-                      onChange={(e) => setPreferences({
-                        ...preferences, 
-                        material_preferences: {...preferences.material_preferences, own_helmet: e.target.checked}
-                      })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Eigen cap</span>
-                  </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Materiaal voorkeuren</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'bitless_ok', label: 'Bitloos OK' },
+                    { key: 'spurs', label: 'Sporen OK' },
+                    { key: 'auxiliary_reins', label: 'Hulpteugels OK' },
+                    { key: 'own_helmet', label: 'Eigen cap' },
+                  ].map(item => {
+                    const active = !!preferences.material_preferences[item.key];
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setPreferences({
+                          ...preferences,
+                          material_preferences: {
+                            ...preferences.material_preferences,
+                            [item.key]: !active
+                          }
+                        })}
+                        className={`px-3 py-2 rounded-full border text-sm transition-colors ${
+                          active ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Gezondheids beperkingen</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {healthRestrictions.map(restriction => (
-                    <button
-                      key={restriction}
-                      type="button"
-                      onClick={() => toggleArrayItem(preferences.health_restrictions, restriction, (items) => setPreferences({...preferences, health_restrictions: items}))}
-                      className={`p-2 text-sm rounded-lg border transition-colors ${
-                        preferences.health_restrictions.includes(restriction)
-                          ? 'bg-blue-100 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {restriction.replace('_', ' ')}
-                    </button>
-                  ))}
+                <label className="block text-sm font-medium text-gray-700 mb-2">Zijn er gezondheidsbeperkingen die invloed hebben op het rijden?</label>
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasHealthRestrictions(true);
+                    }}
+                    className={`px-3 py-1.5 rounded-full border text-sm ${hasHealthRestrictions ? 'bg-red-100 border-red-500 text-red-700' : 'bg-white border-gray-300 text-gray-700'}`}
+                  >Ja</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasHealthRestrictions(false);
+                      // wis selectie indien Nee
+                      setPreferences({ ...preferences, health_restrictions: [] });
+                      setHealthOther('');
+                    }}
+                    className={`px-3 py-1.5 rounded-full border text-sm ${!hasHealthRestrictions ? 'bg-green-100 border-green-500 text-green-700' : 'bg-white border-gray-300 text-gray-700'}`}
+                  >Nee</button>
                 </div>
+
+                {hasHealthRestrictions && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {healthRestrictions.map(restriction => (
+                        <button
+                          key={restriction}
+                          type="button"
+                          onClick={() => toggleArrayItem(preferences.health_restrictions, restriction, (items) => setPreferences({...preferences, health_restrictions: items}))}
+                          className={`p-2 text-sm rounded-lg border transition-colors ${
+                            preferences.health_restrictions.includes(restriction)
+                              ? 'bg-blue-100 border-blue-500 text-blue-700'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {restriction.replace('_', ' ')}
+                        </button>
+                      ))}
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-1">Anders, namelijk</label>
+                      <input
+                        type="text"
+                        value={healthOther}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setHealthOther(val);
+                          // update in array als 'anders: <text>'
+                          const othersFiltered = (preferences.health_restrictions || []).filter(i => !(typeof i === 'string' && i.startsWith('anders:')));
+                          const next = val && val.trim() !== '' ? [...othersFiltered, `anders: ${val.trim()}`] : othersFiltered;
+                          setPreferences({ ...preferences, health_restrictions: next });
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="bijv. astma, rughernia, etc."
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div>

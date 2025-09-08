@@ -79,6 +79,7 @@ class RiderProfile(Base):
     # Material Preferences
     bitless_ok = Column(Boolean, default=True)
     training_aids_ok = Column(Boolean, default=True)
+    spurs_ok = Column(Boolean, default=False)
     
     # Health & Limitations
     health_limitations = Column(Text, nullable=True)
