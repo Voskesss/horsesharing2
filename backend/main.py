@@ -205,6 +205,89 @@ async def create_or_update_rider_profile(
     # Check if rider profile already exists
     existing_profile = db.query(RiderProfile).filter(RiderProfile.user_id == current_user.id).first()
     print(f"Existing profile found: {existing_profile is not None}")
+
+    # CREATE path: if no profile yet, create one now (including DOB -> age)
+    if not existing_profile:
+        data = profile_data.dict()
+        # Compose availability dict from arrays
+        availability_dict = {d: (data.get('available_time_blocks') or []) for d in (data.get('available_days') or [])}
+
+        new_profile = RiderProfile(
+            user_id=current_user.id,
+            postcode=data.get('postcode', '') or '',
+            house_number=data.get('house_number') or '',
+            city=data.get('city') or '',
+            max_travel_distance=data.get('max_travel_distance_km', 25) or 25,
+            transport_options=data.get('transport_options', []) or [],
+            available_days=availability_dict,
+            session_duration_min=data.get('session_duration_min'),
+            session_duration_max=data.get('session_duration_max'),
+            budget_min=data.get('budget_min_euro'),
+            budget_max=data.get('budget_max_euro'),
+            years_experience=data.get('experience_years'),
+            goals=data.get('riding_goals', []) or [],
+            discipline_preferences=data.get('discipline_preferences', []) or [],
+            personality_style=data.get('personality_style', []) or [],
+            willing_tasks=data.get('willing_tasks', []) or [],
+            task_frequency=data.get('task_frequency') or '',
+            photos=data.get('photos', []) or [],
+            video_intro=data.get('video_intro_url') or '',
+            has_insurance=bool(data.get('insurance_coverage')),
+            no_gos=json.dumps(data.get('no_gos', [])),
+            health_limitations=json.dumps(data.get('health_restrictions', [])),
+        )
+
+        # Comfort levels mapping
+        comfort = data.get('comfort_levels') or {}
+        if 'traffic' in comfort:
+            new_profile.comfortable_with_traffic = bool(comfort['traffic'])
+        if 'outdoor_solo' in comfort:
+            new_profile.comfortable_solo_outside = bool(comfort['outdoor_solo'])
+        if 'jumping_height' in comfort and comfort['jumping_height'] is not None:
+            try:
+                new_profile.max_jump_height = int(comfort['jumping_height'])
+            except Exception:
+                pass
+
+        # Material preferences mapping
+        material = data.get('material_preferences') or {}
+        if 'bitless_ok' in material:
+            new_profile.bitless_ok = bool(material['bitless_ok'])
+        if 'auxiliary_reins' in material and material['auxiliary_reins'] is not None:
+            new_profile.training_aids_ok = bool(material['auxiliary_reins'])
+
+        # Date of birth -> date + age
+        dob_str = data.get('date_of_birth')
+        if dob_str:
+            try:
+                from datetime import datetime, date
+                try:
+                    dob = datetime.strptime(dob_str, "%d-%m-%Y").date()
+                except ValueError:
+                    dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+                new_profile.date_of_birth = dob
+                today = date.today()
+                age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+                new_profile.age = max(age, 0)
+            except Exception as e:
+                print(f"Failed to parse date_of_birth on create '{dob_str}': {e}")
+        else:
+            # fallback age if unknown
+            new_profile.age = 25
+
+        # If first/last provided, update User.name too
+        name_parts = []
+        if data.get('first_name'): name_parts.append(data['first_name'])
+        if data.get('last_name'): name_parts.append(data['last_name'])
+        if name_parts:
+            current_user.name = ' '.join(name_parts)
+
+        db.add(current_user)
+        db.add(new_profile)
+        print("About to commit changes to database (create)...")
+        db.commit()
+        db.refresh(new_profile)
+        return {"message": "Rider profile created", "profile_id": new_profile.id}
     
     # Map Pydantic fields naar database fields
     field_mapping = {
