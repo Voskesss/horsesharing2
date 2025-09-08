@@ -131,6 +131,8 @@ class RiderProfileCreate(BaseModel):
     phone: Optional[str] = None
     date_of_birth: Optional[str] = None
     postcode: Optional[str] = None
+    house_number: Optional[str] = None
+    city: Optional[str] = None
     max_travel_distance_km: Optional[int] = 25
     transport_options: List[str] = []
     
@@ -209,14 +211,16 @@ async def create_or_update_rider_profile(
         'first_name': None,  # Niet in database - zit in User.name
         'last_name': None,   # Niet in database - zit in User.name  
         'phone': None,       # Niet in database - zit in User.phone
-        'date_of_birth': None, # Niet in database
+        'date_of_birth': None, # Speciaal: mappen naar date_of_birth + age
         'postcode': 'postcode',
+        'house_number': 'house_number',
+        'city': 'city',
         'max_travel_distance_km': 'max_travel_distance',
         'transport_options': 'transport_options',
-        'available_days': 'available_days',
-        'available_time_blocks': None,  # Niet in database
-        'session_duration_min': None,   # Niet in database
-        'session_duration_max': None,   # Niet in database
+        'available_days': None,  # Speciaal: combineren met available_time_blocks
+        'available_time_blocks': None,  # Speciaal
+        'session_duration_min': 'session_duration_min',
+        'session_duration_max': 'session_duration_max',
         'start_date': 'start_date',
         'arrangement_duration': 'duration_preference',
         'budget_min_euro': 'budget_min',
@@ -375,78 +379,6 @@ async def create_or_update_rider_profile(
                         value = json.dumps(value)
                     setattr(existing_profile, db_field, value)
                 print(f"Set {db_field} = {value}")
-        
-        # Special mappings
-        comfort = data.get('comfort_levels', {})
-        if comfort:
-            if 'traffic' in comfort:
-                existing_profile.comfortable_with_traffic = comfort['traffic']
-            if 'outdoor_solo' in comfort:
-                existing_profile.comfortable_solo_outside = comfort['outdoor_solo']
-        
-        material = data.get('material_preferences', {})
-        if material:
-            print(f"Processing material preferences: {material}")
-            if 'bitless_ok' in material:
-                existing_profile.bitless_ok = material['bitless_ok']
-                print(f"Set bitless_ok = {material['bitless_ok']}")
-        
-        print("About to commit changes to database...")
-        db.commit()
-        db.refresh(existing_profile)
-        print(f"Profile updated successfully with ID: {existing_profile.id}")
-        return {"message": "Rider profile updated successfully", "profile_id": existing_profile.id}
-    else:
-        # Create new profile met minimale vereiste velden
-        data = profile_data.dict()
-        
-        # Update User fields
-        if data.get('first_name') or data.get('last_name'):
-            name_parts = []
-            if data.get('first_name'): name_parts.append(data['first_name'])
-            if data.get('last_name'): name_parts.append(data['last_name'])
-            if name_parts:
-                current_user.name = ' '.join(name_parts)
-        
-        if data.get('phone'):
-            current_user.phone = data['phone']
-        
-        new_profile = RiderProfile(
-            user_id=current_user.id,
-            postcode=data.get('postcode', ''),
-            max_travel_distance=data.get('max_travel_distance_km', 25),
-            transport_options=data.get('transport_options', []),
-            available_days=data.get('available_days', []),
-            age=25,  # Default age - should be calculated from date_of_birth
-            budget_min=data.get('budget_min_euro', 0),
-            budget_max=data.get('budget_max_euro', 0),
-            years_experience=data.get('experience_years', 0),
-            goals=data.get('riding_goals', []),
-            discipline_preferences=data.get('discipline_preferences', []),
-            personality_style=data.get('personality_style', []),
-            willing_tasks=data.get('willing_tasks', []),
-            task_frequency=data.get('task_frequency', ''),
-            photos=data.get('photos', []),
-            video_intro=data.get('video_intro_url', ''),
-            has_insurance=data.get('insurance_coverage', False),
-            no_gos=json.dumps(data.get('no_gos', [])),
-            health_limitations=json.dumps(data.get('health_restrictions', []))
-        )
-        
-        # Special mappings voor nieuwe profile
-        comfort = data.get('comfort_levels', {})
-        if comfort:
-            new_profile.comfortable_with_traffic = comfort.get('traffic', False)
-            new_profile.comfortable_solo_outside = comfort.get('outdoor_solo', False)
-        
-        material = data.get('material_preferences', {})
-        if material:
-            new_profile.bitless_ok = material.get('bitless_ok', True)
-        
-        db.add(new_profile)
-        db.commit()
-        db.refresh(new_profile)
-        return {"message": "Rider profile created successfully", "profile_id": new_profile.id}
 
 @app.get("/rider-profile")
 async def get_rider_profile(
@@ -468,23 +400,46 @@ async def get_rider_profile(
         first = parts[0]
         last = parts[1] if len(parts) > 1 else ""
 
+    # Flatten availability for frontend expectations
+    flat_days = []
+    flat_blocks = []
+    if isinstance(profile.available_days, dict):
+        flat_days = list(profile.available_days.keys())
+        # Union of all blocks
+        seen = set()
+        for arr in profile.available_days.values():
+            for b in (arr or []):
+                seen.add(b)
+        flat_blocks = list(seen)
+    else:
+        flat_days = profile.available_days if profile.available_days else []
+        flat_blocks = []
+
+    # Format DOB
+    dob_str = ""
+    try:
+        if profile.date_of_birth:
+            dob_str = profile.date_of_birth.strftime("%Y-%m-%d")
+    except Exception:
+        dob_str = ""
+
     return {
         "id": profile.id,
         "user_id": profile.user_id,
         "first_name": first,
         "last_name": last,
         "phone": current_user.phone,
-        # Field not in model yet; return empty string for now
-        "date_of_birth": "",
+        "date_of_birth": dob_str,
+        "age": profile.age,
         "postcode": profile.postcode,
+        "house_number": profile.house_number,
+        "city": profile.city,
         "max_travel_distance_km": profile.max_travel_distance,
         "transport_options": profile.transport_options if profile.transport_options else [],
-        "available_days": profile.available_days if profile.available_days else [],
-        # Not in model yet
-        "available_time_blocks": [],
-        # Not in model yet
-        "session_duration_min": 60,
-        "session_duration_max": 120,
+        "available_days": flat_days,
+        "available_time_blocks": flat_blocks,
+        "session_duration_min": profile.session_duration_min if profile.session_duration_min is not None else 60,
+        "session_duration_max": profile.session_duration_max if profile.session_duration_max is not None else 120,
         "start_date": profile.start_date,
         "arrangement_duration": profile.duration_preference,
         "budget_min_euro": profile.budget_min,

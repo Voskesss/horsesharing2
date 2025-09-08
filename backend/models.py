@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey, Float, JSON, Date
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
@@ -34,11 +34,15 @@ class RiderProfile(Base):
     
     # Location & Travel
     postcode = Column(String(10), nullable=False)
+    house_number = Column(String(10), nullable=True)
+    city = Column(String(100), nullable=True)
     max_travel_distance = Column(Integer, nullable=False)  # km
     transport_options = Column(JSON, nullable=True)  # ["auto", "openbaar_vervoer", "fiets", "te_voet"]
     
     # Availability
     available_days = Column(JSON, nullable=False)  # {"monday": ["morning", "afternoon"], ...}
+    session_duration_min = Column(Integer, nullable=True)
+    session_duration_max = Column(Integer, nullable=True)
     start_date = Column(DateTime, nullable=True)
     duration_preference = Column(String(50), nullable=True)  # temporary/ongoing
     
@@ -76,6 +80,7 @@ class RiderProfile(Base):
     fears_anxieties = Column(Text, nullable=True)
     
     # Age & Consent
+    date_of_birth = Column(Date, nullable=True)
     age = Column(Integer, nullable=False)
     parent_consent = Column(Boolean, nullable=True)  # For under 18
     parent_contact = Column(String(255), nullable=True)
