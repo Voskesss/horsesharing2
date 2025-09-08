@@ -162,7 +162,8 @@ export function transformProfileDataForAPI(profileData) {
 
   // Ervaring
   add('experience_years', experience.experience_years);
-  add('certification_level', experience.certification_level);
+  add('certification_level', experience.certification_level); // legacy compat
+  add('certifications', Array.isArray(experience.certifications) ? experience.certifications : []);
   add('comfort_levels', experience.comfort_levels);
 
   // Doelen
@@ -229,6 +230,7 @@ export function transformProfileDataFromAPI(apiData) {
     experience: {
       experience_years: apiData.years_experience || apiData.experience_years || 0,
       certification_level: apiData.fnrs_level || apiData.certification_level || '',
+      certifications: Array.isArray(apiData.certifications) ? apiData.certifications : [],
       comfort_levels: {
         traffic: apiData.comfortable_with_traffic || false,
         outdoor_solo: apiData.comfortable_solo_outside || false,

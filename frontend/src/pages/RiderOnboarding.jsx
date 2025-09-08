@@ -46,7 +46,8 @@ const RiderOnboarding = () => {
   // Ervaring
   const [experience, setExperience] = useState({
     experience_years: 0,
-    certification_level: '',
+    certification_level: '', // legacy, niet meer gebruikt maar behouden voor compat
+    certifications: [],
     comfort_levels: {
       traffic: false,
       outdoor_solo: false,
@@ -244,7 +245,11 @@ const RiderOnboarding = () => {
   const healthRestrictions = ['hoogtevrees', 'rugproblemen', 'knieproblemen', 'allergieën', 'medicatie'];
   const noGos = ['drukke_stallen', 'avond_afspraken', 'weekenden', 'slecht_weer', 'grote_groepen'];
   const personalityStyles = ['rustig', 'energiek', 'geduldig', 'assertief', 'flexibel', 'gestructureerd'];
-  const certificationLevels = ['beginner', 'gevorderd_beginner', 'intermediate', 'gevorderd', 'expert'];
+  // Certificeringen (NL): FNRS, KNHS Dressuur en Springen
+  const generalLevels = ['Beginner','Gevorderd beginner','Recreatieve ruiter','Hobby dressuur','Hobby springen'];
+  const fnrsLevels = Array.from({ length: 12 }, (_, i) => `FNRS F${i + 1}`);
+  const dressuurLevels = ['Dressuur B','Dressuur L1','Dressuur L2','Dressuur M1','Dressuur M2','Dressuur Z1','Dressuur Z2','Dressuur ZZ-Licht','Dressuur ZZ-Zwaar'];
+  const springenLevels = ['Springen B','Springen L','Springen M','Springen Z','Springen ZZ'];
 
   if (loading) {
     return (
@@ -500,17 +505,69 @@ const RiderOnboarding = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Certificering niveau</label>
-                <select
-                  value={experience.certification_level}
-                  onChange={(e) => setExperience({...experience, certification_level: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Selecteer niveau...</option>
-                  {certificationLevels.map(level => (
-                    <option key={level} value={level}>{level.replace('_', ' ')}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Certificeringen (meerdere mogelijk)</label>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-xs text-gray-500">Algemeen</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {generalLevels.map(level => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-amber-100 border-amber-500 text-amber-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">FNRS</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {fnrsLevels.map(level => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">KNHS Dressuur</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {dressuurLevels.map(level => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-green-100 border-green-500 text-green-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">KNHS Springen</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {springenLevels.map(level => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-purple-100 border-purple-500 text-purple-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>

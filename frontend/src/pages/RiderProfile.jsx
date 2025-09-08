@@ -271,10 +271,6 @@ const RiderProfile = () => {
                   €{profileData.budget.budget_min_euro} - €{profileData.budget.budget_max_euro}
                 </p>
               </div>
-              <div>
-                <span className="text-sm text-gray-500">Type:</span>
-                <p className="font-medium">{profileData.budget.budget_type}</p>
-              </div>
             </div>
           </div>
 
@@ -292,6 +288,18 @@ const RiderProfile = () => {
                   {profileData.experience.certification_level || 'Niet ingevuld'}
                 </p>
               </div>
+              {Array.isArray(profileData.experience.certifications) && profileData.experience.certifications.length > 0 && (
+                <div>
+                  <span className="text-sm text-gray-500">Certificeringen:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {profileData.experience.certifications.map(cert => (
+                      <span key={cert} className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">
+                        {cert}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <span className="text-sm text-gray-500">Max spronghoogte:</span>
                 <p className="font-medium">{profileData.experience.comfort_levels.jumping_height} cm</p>

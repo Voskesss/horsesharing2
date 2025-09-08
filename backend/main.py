@@ -151,7 +151,8 @@ class RiderProfileCreate(BaseModel):
     
     # Ervaring
     experience_years: Optional[int] = None
-    certification_level: Optional[str] = None
+    certification_level: Optional[str] = None  # legacy, kept for compatibility
+    certifications: List[str] = []  # new multi-select
     comfort_levels: dict = {}
     
     # Doelen
@@ -249,8 +250,12 @@ async def create_or_update_rider_profile(
             except Exception:
                 pass
 
+        # Certifications mapping
+        certifications = data.get('certifications', [])
+        new_profile.certifications = certifications
+
         # Material preferences mapping
-        material = data.get('material_preferences') or {}
+        material = data.get('material_preferences', {})
         if 'bitless_ok' in material:
             new_profile.bitless_ok = bool(material['bitless_ok'])
         if 'auxiliary_reins' in material and material['auxiliary_reins'] is not None:
@@ -310,7 +315,8 @@ async def create_or_update_rider_profile(
         'budget_max_euro': 'budget_max',
         'budget_type': None,  # Niet in database
         'experience_years': 'years_experience',
-        'certification_level': 'fnrs_level',
+        'certification_level': 'fnrs_level',  # legacy mapping to fnrs_level
+        'certifications': 'certifications',
         'comfort_levels': None,  # Mapping naar meerdere boolean velden
         'riding_goals': 'goals',
         'discipline_preferences': 'discipline_preferences',
@@ -559,6 +565,7 @@ async def get_rider_profile(
         "budget_max_euro": profile.budget_max,
         "experience_years": profile.years_experience,
         "certification_level": profile.fnrs_level or profile.knhs_level or "",
+        "certifications": profile.certifications or [],
         "comfort_levels": {
             "traffic": profile.comfortable_with_traffic,
             "outdoor_solo": profile.comfortable_solo_outside,

@@ -54,6 +54,7 @@ class RiderProfile(Base):
     years_experience = Column(Integer, nullable=True)
     fnrs_level = Column(String(50), nullable=True)
     knhs_level = Column(String(50), nullable=True)
+    certifications = Column(JSON, nullable=True)  # list of strings e.g., ["FNRS F5", "Dressuur L2", "Springen M"]
     lesson_history = Column(Text, nullable=True)
     references = Column(Text, nullable=True)
     
