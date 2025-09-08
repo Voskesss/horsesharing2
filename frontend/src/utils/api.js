@@ -149,8 +149,13 @@ export function transformProfileDataForAPI(profileData) {
   add('transport_options', Array.isArray(basicInfo.transport_options) ? basicInfo.transport_options : []);
 
   // Beschikbaarheid
-  add('available_days', Array.isArray(availability.available_days) ? availability.available_days : []);
-  add('available_time_blocks', Array.isArray(availability.available_time_blocks) ? availability.available_time_blocks : []);
+  const hasScheduleObj = availability.available_schedule && typeof availability.available_schedule === 'object' && Object.keys(availability.available_schedule).length > 0;
+  if (hasScheduleObj) {
+    add('available_schedule', availability.available_schedule);
+  } else {
+    add('available_days', Array.isArray(availability.available_days) ? availability.available_days : []);
+    add('available_time_blocks', Array.isArray(availability.available_time_blocks) ? availability.available_time_blocks : []);
+  }
   add('session_duration_min', availability.session_duration_min);
   add('session_duration_max', availability.session_duration_max);
   add('start_date', availability.start_date);
@@ -220,6 +225,16 @@ export function transformProfileDataFromAPI(apiData) {
     availability: {
       available_days: parseJSONArray(apiData.available_days),
       available_time_blocks: parseJSONArray(apiData.available_time_blocks),
+      available_schedule: apiData.available_schedule && typeof apiData.available_schedule === 'object'
+        ? apiData.available_schedule
+        : (() => {
+            // Fallback: bouw schedule op basis van arrays
+            const days = parseJSONArray(apiData.available_days);
+            const blocks = parseJSONArray(apiData.available_time_blocks);
+            const obj = {};
+            days.forEach(d => { obj[d] = blocks; });
+            return obj;
+          })(),
       session_duration_min: apiData.session_duration_min || 60,
       session_duration_max: apiData.session_duration_max || 120,
       start_date: apiData.start_date || '',

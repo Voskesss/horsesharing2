@@ -407,43 +407,73 @@ const RiderOnboarding = () => {
                 Beschikbaarheid
               </h2>
 
+              {/* Nieuwe UI: per-dag dagdelen (ochtend/middag/avond) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Beschikbare dagen</label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {weekDays.map(day => (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => toggleArrayItem(availability.available_days, day, (items) => setAvailability({...availability, available_days: items}))}
-                      className={`p-2 text-sm rounded-lg border transition-colors ${
-                        availability.available_days.includes(day)
-                          ? 'bg-blue-100 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {day.slice(0, 2)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Beschikbaarheid per dag</label>
+                <div className="space-y-2">
+                  {weekDays.map((day) => {
+                    const schedule = availability.available_schedule || {};
+                    const dayBlocks = Array.isArray(schedule[day]) ? schedule[day] : [];
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tijdsblokken</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {timeBlocks.map(block => (
-                    <button
-                      key={block}
-                      type="button"
-                      onClick={() => toggleArrayItem(availability.available_time_blocks, block, (items) => setAvailability({...availability, available_time_blocks: items}))}
-                      className={`p-2 text-sm rounded-lg border transition-colors ${
-                        availability.available_time_blocks.includes(block)
-                          ? 'bg-blue-100 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {block}
-                    </button>
-                  ))}
+                    const updateFromSchedule = (nextSchedule) => {
+                      const days = Object.keys(nextSchedule).filter(d => Array.isArray(nextSchedule[d]) && nextSchedule[d].length > 0);
+                      const union = Array.from(new Set(days.flatMap(d => nextSchedule[d])));
+                      setAvailability({
+                        ...availability,
+                        available_schedule: nextSchedule,
+                        available_days: days,
+                        available_time_blocks: union,
+                      });
+                    };
+
+                    const toggleDay = () => {
+                      const next = { ...schedule };
+                      if (dayBlocks.length > 0) {
+                        next[day] = [];
+                      } else {
+                        next[day] = [];
+                      }
+                      updateFromSchedule(next);
+                    };
+
+                    const toggleBlock = (block) => {
+                      const next = { ...schedule };
+                      const current = Array.isArray(next[day]) ? [...next[day]] : [];
+                      const has = current.includes(block);
+                      const updated = has ? current.filter(b => b !== block) : [...current, block];
+                      next[day] = updated;
+                      updateFromSchedule(next);
+                    };
+
+                    const active = dayBlocks.length > 0;
+                    return (
+                      <div key={day} className="flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={toggleDay}
+                          className={`w-28 px-3 py-2 rounded-lg border text-sm text-left ${active ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-700'}`}
+                        >
+                          {day.charAt(0).toUpperCase() + day.slice(1)}
+                        </button>
+                        <div className="flex items-center gap-2">
+                          {timeBlocks.map(block => (
+                            <button
+                              key={`${day}-${block}`}
+                              type="button"
+                              onClick={() => toggleBlock(block)}
+                              className={`px-3 py-2 rounded-full border text-sm ${
+                                dayBlocks.includes(block)
+                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  : 'bg-white border-gray-300 text-gray-700'
+                              } ${!active && !dayBlocks.includes(block) ? 'opacity-70' : ''}`}
+                            >
+                              {block}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

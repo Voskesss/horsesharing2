@@ -139,6 +139,7 @@ class RiderProfileCreate(BaseModel):
     # Beschikbaarheid
     available_days: List[str] = []
     available_time_blocks: List[str] = []
+    available_schedule: Optional[dict] = None  # nieuw: { 'maandag': ['ochtend','avond'], ... }
     session_duration_min: Optional[int] = 60
     session_duration_max: Optional[int] = 120
     start_date: Optional[str] = None
@@ -211,8 +212,12 @@ async def create_or_update_rider_profile(
     # CREATE path: if no profile yet, create one now (including DOB -> age)
     if not existing_profile:
         data = profile_data.dict()
-        # Compose availability dict from arrays
-        availability_dict = {d: (data.get('available_time_blocks') or []) for d in (data.get('available_days') or [])}
+        # Compose availability dict from arrays or per-day schedule
+        availability_dict = {}
+        if isinstance(data.get('available_schedule'), dict):
+            availability_dict = data.get('available_schedule') or {}
+        else:
+            availability_dict = {d: (data.get('available_time_blocks') or []) for d in (data.get('available_days') or [])}
 
         new_profile = RiderProfile(
             user_id=current_user.id,
@@ -508,11 +513,16 @@ async def create_or_update_rider_profile(
             except Exception as e:
                 print(f"Failed to parse date_of_birth '{data.get('date_of_birth')}': {e}")
 
-        # 2) Availability: if arrays provided, compose dict storage
-        days_arr = data.get('available_days') or []
-        blocks_arr = data.get('available_time_blocks') or []
-        if isinstance(days_arr, list) and isinstance(blocks_arr, list) and (days_arr or blocks_arr):
-            existing_profile.available_days = {d: blocks_arr for d in days_arr}
+        # 2) Availability
+        if isinstance(data.get('available_schedule'), dict):
+            # prefer per-day schedule if provided
+            existing_profile.available_days = data.get('available_schedule') or {}
+        else:
+            # fallback to arrays -> same blocks for all selected days
+            days_arr = data.get('available_days') or []
+            blocks_arr = data.get('available_time_blocks') or []
+            if isinstance(days_arr, list) and isinstance(blocks_arr, list) and (days_arr or blocks_arr):
+                existing_profile.available_days = {d: blocks_arr for d in days_arr}
 
         # 3) Comfort: map booleans and trail_rides discipline toggle
         comfort = data.get('comfort_levels') or {}
@@ -614,6 +624,7 @@ async def get_rider_profile(
         "transport_options": profile.transport_options if profile.transport_options else [],
         "available_days": flat_days,
         "available_time_blocks": flat_blocks,
+        "available_schedule": profile.available_days or {},
         "session_duration_min": profile.session_duration_min if profile.session_duration_min is not None else 60,
         "session_duration_max": profile.session_duration_max if profile.session_duration_max is not None else 120,
         "start_date": profile.start_date,
