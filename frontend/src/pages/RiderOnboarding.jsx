@@ -748,11 +748,12 @@ const RiderOnboarding = () => {
               {/* Wat wil je doen? (verplaatst hierheen) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Wat wil je doen?</label>
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
                   {[
                     { key: 'care_only', label: 'Alleen verzorgen/grondwerk' },
                     { key: 'ride_or_care', label: 'Rijden of verzorgen' },
                     { key: 'ride_only', label: 'Uitsluitend rijden' },
+                    { key: 'drive_only', label: 'Uitsluitend mennen' },
                   ].map(opt => {
                     const active = experience.activity_mode === opt.key;
                     return (
@@ -766,38 +767,53 @@ const RiderOnboarding = () => {
                   })}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {[
+                {/* Activiteiten onder de modus, afhankelijk van keuze */}
+                {(() => {
+                  const careActivities = [
                     { key: 'verzorging', label: 'Verzorging' },
                     { key: 'grondwerk', label: 'Grondwerk' },
                     { key: 'longeren', label: 'Longeren' },
-                    { key: 'rijden', label: 'Rijden' },
-                    { key: 'mennen', label: 'Mennen' },
-                  ].map(item => {
-                    const active = experience.activity_preferences.includes(item.key);
-                    const disabled = experience.activity_mode === 'care_only' && item.key === 'rijden';
-                    return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => {
-                          if (disabled) return;
-                          const has = experience.activity_preferences.includes(item.key);
-                          const next = has
-                            ? experience.activity_preferences.filter(k => k !== item.key)
-                            : [...experience.activity_preferences, item.key];
-                          setExperience({ ...experience, activity_preferences: next });
-                        }}
-                        className={`px-3 py-2 rounded-full border text-sm ${
-                          active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'
-                        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >{item.label}</button>
-                    );
-                  })}
-                </div>
+                    { key: 'hand_walking', label: 'Wandelen aan de hand' },
+                    { key: 'pasture_turnout', label: 'Weidegang/uitzetten' },
+                    { key: 'medical_assist', label: 'Medische verzorging assisteren' },
+                  ];
+                  const rideActivities = [
+                    { key: 'buitenritten', label: 'Buitenritten' },
+                    { key: 'dressuur_training', label: 'Dressuurmatig trainen' },
+                    { key: 'springen_training', label: 'Springen trainen' },
+                  ];
+                  let shown = [];
+                  if (experience.activity_mode === 'care_only') shown = careActivities;
+                  if (experience.activity_mode === 'ride_or_care') shown = [...careActivities, ...rideActivities];
+                  if (experience.activity_mode === 'ride_only') shown = [];
+                  if (experience.activity_mode === 'drive_only') shown = [];
+                  if (shown.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-2">
+                      {shown.map(item => {
+                        const active = experience.activity_preferences.includes(item.key);
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => {
+                              const has = experience.activity_preferences.includes(item.key);
+                              const next = has
+                                ? experience.activity_preferences.filter(k => k !== item.key)
+                                : [...experience.activity_preferences, item.key];
+                              setExperience({ ...experience, activity_preferences: next });
+                            }}
+                            className={`px-3 py-2 rounded-full border text-sm ${
+                              active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'
+                            }`}
+                          >{item.label}</button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
-                {experience.activity_preferences.includes('mennen') && (
+                {experience.activity_mode === 'drive_only' && (
                   <div className="mt-3 max-w-sm">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Niveau mennen</label>
                     <select
