@@ -557,7 +557,6 @@ async def get_rider_profile(
         "arrangement_duration": profile.duration_preference,
         "budget_min_euro": profile.budget_min,
         "budget_max_euro": profile.budget_max,
-        "budget_type": "monthly",  # Default for now
         "experience_years": profile.years_experience,
         "certification_level": profile.fnrs_level or profile.knhs_level or "",
         "comfort_levels": {

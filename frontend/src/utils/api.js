@@ -156,10 +156,9 @@ export function transformProfileDataForAPI(profileData) {
   add('start_date', availability.start_date);
   add('arrangement_duration', availability.arrangement_duration);
 
-  // Budget
+  // Budget (per maand)
   add('budget_min_euro', budget.budget_min_euro);
   add('budget_max_euro', budget.budget_max_euro);
-  add('budget_type', budget.budget_type);
 
   // Ervaring
   add('experience_years', experience.experience_years);
@@ -225,8 +224,7 @@ export function transformProfileDataFromAPI(apiData) {
     },
     budget: {
       budget_min_euro: apiData.budget_min || apiData.budget_min_euro || 150,
-      budget_max_euro: apiData.budget_max || apiData.budget_max_euro || 250,
-      budget_type: apiData.budget_type || 'monthly'
+      budget_max_euro: apiData.budget_max || apiData.budget_max_euro || 250
     },
     experience: {
       experience_years: apiData.years_experience || apiData.experience_years || 0,

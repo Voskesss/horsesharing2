@@ -40,8 +40,7 @@ const RiderOnboarding = () => {
   // Budget
   const [budget, setBudget] = useState({
     budget_min_euro: 150,
-    budget_max_euro: 250,
-    budget_type: 'monthly'
+    budget_max_euro: 250
   });
 
   // Ervaring
@@ -478,18 +477,7 @@ const RiderOnboarding = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Budget type</label>
-                <select
-                  value={budget.budget_type}
-                  onChange={(e) => setBudget({...budget, budget_type: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="monthly">Per maand</option>
-                  <option value="weekly">Per week</option>
-                  <option value="per_session">Per sessie</option>
-                </select>
-              </div>
+              {/* Budget type verwijderd: we hanteren per maand als standaard */}
             </div>
           )}
 
