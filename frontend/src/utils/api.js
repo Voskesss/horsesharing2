@@ -170,6 +170,10 @@ export function transformProfileDataForAPI(profileData) {
   add('certification_level', experience.certification_level); // legacy compat
   add('certifications', Array.isArray(experience.certifications) ? experience.certifications : []);
   add('comfort_levels', experience.comfort_levels);
+  // Activiteiten
+  add('activity_mode', experience.activity_mode);
+  add('activity_preferences', Array.isArray(experience.activity_preferences) ? experience.activity_preferences : []);
+  add('mennen_experience', experience.mennen_experience);
 
   // Doelen
   add('riding_goals', Array.isArray(goals.riding_goals) ? goals.riding_goals : []);
@@ -265,6 +269,11 @@ export function transformProfileDataFromAPI(apiData) {
         trail_rides: Array.isArray(apiData.discipline_preferences) ? apiData.discipline_preferences.includes('buitenritten') : false,
         jumping_height: apiData.max_jump_height || 0,
       }
+      ,
+      // Activiteiten
+      activity_mode: apiData.activity_mode || null,
+      activity_preferences: parseJSONArray(apiData.activity_preferences),
+      mennen_experience: apiData.mennen_experience || null
     },
     goals: {
       riding_goals: parseJSONArray(apiData.goals || apiData.riding_goals),

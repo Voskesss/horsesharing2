@@ -54,7 +54,11 @@ const RiderOnboarding = () => {
       nervous_horses: false,
       young_horses: false,
       jumping_height: 0
-    }
+    },
+    // Activiteiten
+    activity_mode: null, // 'care_only' | 'ride_or_care' | 'ride_only'
+    activity_preferences: [], // ['verzorging','grondwerk','longeren','rijden','mennen']
+    mennen_experience: null // 'beginner' | 'gevorderd' | 'ervaren'
   });
 
   // Doelen
@@ -533,11 +537,11 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 4: Ervaring */}
-          {currentStep === 4 && (
+          {/* Step 6: Ervaring */}
+          {currentStep === 6 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">4</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">6</span>
                 Ervaring
               </h2>
 
@@ -733,53 +737,127 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 5: Doelen */}
-          {currentStep === 5 && (
+          {/* Step 4: Doelen */}
+          {currentStep === 4 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">5</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">4</span>
                 Doelen
               </h2>
 
+              {/* Wat wil je doen? (verplaatst hierheen) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rijdoelen</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {ridingGoals.map(goal => (
-                    <button
-                      key={goal}
-                      type="button"
-                      onClick={() => toggleArrayItem(goals.riding_goals, goal, (items) => setGoals({...goals, riding_goals: items}))}
-                      className={`p-2 text-sm rounded-lg border transition-colors ${
-                        goals.riding_goals.includes(goal)
-                          ? 'bg-blue-100 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {goal.replace('_', ' ')}
-                    </button>
-                  ))}
+                <label className="block text-sm font-medium text-gray-700 mb-2">Wat wil je doen?</label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {[
+                    { key: 'care_only', label: 'Alleen verzorgen/grondwerk' },
+                    { key: 'ride_or_care', label: 'Rijden of verzorgen' },
+                    { key: 'ride_only', label: 'Uitsluitend rijden' },
+                  ].map(opt => {
+                    const active = experience.activity_mode === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setExperience({ ...experience, activity_mode: opt.key })}
+                        className={`px-3 py-2 rounded-full border text-sm ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{opt.label}</button>
+                    );
+                  })}
                 </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'verzorging', label: 'Verzorging' },
+                    { key: 'grondwerk', label: 'Grondwerk' },
+                    { key: 'longeren', label: 'Longeren' },
+                    { key: 'rijden', label: 'Rijden' },
+                    { key: 'mennen', label: 'Mennen' },
+                  ].map(item => {
+                    const active = experience.activity_preferences.includes(item.key);
+                    const disabled = experience.activity_mode === 'care_only' && item.key === 'rijden';
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => {
+                          if (disabled) return;
+                          const has = experience.activity_preferences.includes(item.key);
+                          const next = has
+                            ? experience.activity_preferences.filter(k => k !== item.key)
+                            : [...experience.activity_preferences, item.key];
+                          setExperience({ ...experience, activity_preferences: next });
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${
+                          active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'
+                        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >{item.label}</button>
+                    );
+                  })}
+                </div>
+
+                {experience.activity_preferences.includes('mennen') && (
+                  <div className="mt-3 max-w-sm">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Niveau mennen</label>
+                    <select
+                      value={experience.mennen_experience || ''}
+                      onChange={e => setExperience({ ...experience, mennen_experience: e.target.value || null })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecteer niveau...</option>
+                      <option value="beginner">Beginner</option>
+                      <option value="gevorderd">Gevorderd</option>
+                      <option value="ervaren">Ervaren</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Discipline voorkeuren</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {disciplines.map(discipline => (
-                    <button
-                      key={discipline}
-                      type="button"
-                      onClick={() => toggleArrayItem(goals.discipline_preferences, discipline, (items) => setGoals({...goals, discipline_preferences: items}))}
-                      className={`p-2 text-sm rounded-lg border transition-colors ${
-                        goals.discipline_preferences.includes(discipline)
-                          ? 'bg-blue-100 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {discipline.replace('_', ' ')}
-                    </button>
-                  ))}
+              {/* Rijdoelen alleen tonen als rijden onderdeel is */}
+              {(['ride_or_care','ride_only'].includes(experience.activity_mode || '')) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Rijdoelen</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ridingGoals.map(goal => (
+                      <button
+                        key={goal}
+                        type="button"
+                        onClick={() => toggleArrayItem(goals.riding_goals, goal, (items) => setGoals({...goals, riding_goals: items}))}
+                        className={`p-2 text-sm rounded-lg border transition-colors ${
+                          goals.riding_goals.includes(goal)
+                            ? 'bg-blue-100 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {goal.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {(['ride_or_care','ride_only'].includes(experience.activity_mode || '')) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Discipline voorkeuren</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {disciplines.map(discipline => (
+                      <button
+                        key={discipline}
+                        type="button"
+                        onClick={() => toggleArrayItem(goals.discipline_preferences, discipline, (items) => setGoals({...goals, discipline_preferences: items}))}
+                        className={`p-2 text-sm rounded-lg border transition-colors ${
+                          goals.discipline_preferences.includes(discipline)
+                            ? 'bg-blue-100 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {discipline.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Persoonlijkheidsstijl</label>
@@ -803,11 +881,11 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 6: Taken */}
-          {currentStep === 6 && (
+          {/* Step 5: Taken */}
+          {currentStep === 5 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">6</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">5</span>
                 Taken
               </h2>
 

@@ -161,6 +161,10 @@ class RiderProfileCreate(BaseModel):
     riding_goals: List[str] = []
     discipline_preferences: List[str] = []
     personality_style: List[str] = []
+    # Activiteiten
+    activity_mode: Optional[str] = None  # care_only | ride_or_care | ride_only
+    activity_preferences: List[str] = []
+    mennen_experience: Optional[str] = None
     
     # Taken
     willing_tasks: List[str] = []
@@ -236,6 +240,9 @@ async def create_or_update_rider_profile(
             discipline_preferences=data.get('discipline_preferences', []) or [],
             riding_styles=data.get('riding_styles', []) or [],
             personality_style=data.get('personality_style', []) or [],
+            activity_mode=data.get('activity_mode'),
+            activity_preferences=data.get('activity_preferences', []) or [],
+            mennen_experience=data.get('mennen_experience'),
             willing_tasks=data.get('willing_tasks', []) or [],
             task_frequency=data.get('task_frequency') or '',
             photos=data.get('photos', []) or [],
@@ -550,7 +557,15 @@ async def create_or_update_rider_profile(
                 dp = [x for x in dp if x != 'buitenritten']
             existing_profile.discipline_preferences = dp
 
-        # 4) Material preferences on UPDATE
+        # 4) Activities on UPDATE
+        if 'activity_mode' in data:
+            existing_profile.activity_mode = data.get('activity_mode')
+        if 'activity_preferences' in data and isinstance(data.get('activity_preferences'), list):
+            existing_profile.activity_preferences = data.get('activity_preferences')
+        if 'mennen_experience' in data:
+            existing_profile.mennen_experience = data.get('mennen_experience')
+
+        # 5) Material preferences on UPDATE
         material = data.get('material_preferences') or {}
         if 'bitless_ok' in material:
             existing_profile.bitless_ok = bool(material['bitless_ok'])
@@ -646,6 +661,9 @@ async def get_rider_profile(
         "riding_goals": profile.goals if profile.goals else [],
         "discipline_preferences": profile.discipline_preferences if profile.discipline_preferences else [],
         "riding_styles": profile.riding_styles if profile.riding_styles else [],
+        "activity_mode": profile.activity_mode,
+        "activity_preferences": profile.activity_preferences if profile.activity_preferences else [],
+        "mennen_experience": profile.mennen_experience,
         "personality_style": profile.personality_style if profile.personality_style else [],
         "willing_tasks": profile.willing_tasks if profile.willing_tasks else [],
         "task_frequency": profile.task_frequency,
