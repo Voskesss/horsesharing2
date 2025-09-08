@@ -181,6 +181,8 @@ export function transformProfileDataForAPI(profileData) {
   // insurance_coverage: false is betekenisvol, dus allowFalse: true
   add('insurance_coverage', preferences.insurance_coverage, { allowFalse: true });
   add('no_gos', Array.isArray(preferences.no_gos) ? preferences.no_gos : []);
+  // Rijstijl & uitrusting
+  add('riding_styles', Array.isArray(preferences.riding_styles) ? preferences.riding_styles : []);
 
   // Media
   add('photos', Array.isArray(media.photos) ? media.photos : []);
@@ -231,7 +233,6 @@ export function transformProfileDataFromAPI(apiData) {
       experience_years: apiData.years_experience || apiData.experience_years || 0,
       certification_level: apiData.fnrs_level || apiData.certification_level || '',
       certifications: Array.isArray(apiData.certifications) ? apiData.certifications : [],
-      // Prefer the nested comfort_levels object from API for full fidelity
       comfort_levels: apiData.comfort_levels ? {
         traffic: !!apiData.comfort_levels.traffic,
         outdoor_solo: !!apiData.comfort_levels.outdoor_solo,
@@ -241,7 +242,6 @@ export function transformProfileDataFromAPI(apiData) {
         trail_rides: !!apiData.comfort_levels.trail_rides,
         jumping_height: apiData.comfort_levels.jumping_height || 0,
       } : {
-        // Fallback for older responses
         traffic: apiData.comfortable_with_traffic || false,
         outdoor_solo: apiData.comfortable_solo_outside || false,
         nervous_horses: false,
@@ -265,11 +265,12 @@ export function transformProfileDataFromAPI(apiData) {
         bitless_ok: apiData.bitless_ok || false,
         spurs: false,
         auxiliary_reins: apiData.training_aids_ok || false,
-        own_helmet: true
+        own_helmet: true,
       },
-      health_restrictions: parseJSONArray(apiData.health_limitations || apiData.health_restrictions),
-      insurance_coverage: apiData.has_insurance || apiData.insurance_coverage || false,
-      no_gos: parseJSONArray(apiData.no_gos)
+      health_restrictions: parseJSONArray(apiData.health_limitations),
+      insurance_coverage: apiData.has_insurance || false,
+      no_gos: parseJSONArray(apiData.no_gos),
+      riding_styles: parseJSONArray(apiData.riding_styles)
     },
     media: {
       photos: parseJSONArray(apiData.photos),

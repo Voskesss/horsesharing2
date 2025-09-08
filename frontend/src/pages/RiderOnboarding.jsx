@@ -80,7 +80,8 @@ const RiderOnboarding = () => {
     },
     health_restrictions: [],
     insurance_coverage: false,
-    no_gos: []
+    no_gos: [],
+    riding_styles: []
   });
 
   // Media
@@ -319,6 +320,8 @@ const RiderOnboarding = () => {
                   />
                 </div>
               </div>
+
+              
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Telefoon</label>
@@ -599,6 +602,44 @@ const RiderOnboarding = () => {
                       ))}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Rijstijl & uitrusting */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rijstijl & uitrusting</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'bitloos', label: 'Bitloos' },
+                    { key: 'hackamore', label: 'Hackamore' },
+                    { key: 'sidepull', label: 'Sidepull' },
+                    { key: 'kaptoom', label: 'Kaptoom' },
+                    { key: 'western', label: 'Western (neck reining)' },
+                    { key: 'natural_horsemanship', label: 'Natural Horsemanship' },
+                    { key: 'rope_halter', label: 'Rope halter/rope work' },
+                    { key: 'bareback', label: 'Bareback (zonder zadel)' },
+                    { key: 'sporen_ok', label: 'Sporen OK' },
+                  ].map(item => {
+                    const active = preferences.riding_styles.includes(item.key);
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          const has = preferences.riding_styles.includes(item.key);
+                          const next = has
+                            ? preferences.riding_styles.filter(k => k !== item.key)
+                            : [...preferences.riding_styles, item.key];
+                          setPreferences({ ...preferences, riding_styles: next });
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm transition-colors ${
+                          active ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

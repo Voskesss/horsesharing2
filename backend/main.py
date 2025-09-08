@@ -154,6 +154,7 @@ class RiderProfileCreate(BaseModel):
     certification_level: Optional[str] = None  # legacy, kept for compatibility
     certifications: List[str] = []  # new multi-select
     comfort_levels: dict = {}
+    riding_styles: List[str] = []  # new: styles & tack experience
     
     # Doelen
     riding_goals: List[str] = []
@@ -228,6 +229,7 @@ async def create_or_update_rider_profile(
             years_experience=data.get('experience_years'),
             goals=data.get('riding_goals', []) or [],
             discipline_preferences=data.get('discipline_preferences', []) or [],
+            riding_styles=data.get('riding_styles', []) or [],
             personality_style=data.get('personality_style', []) or [],
             willing_tasks=data.get('willing_tasks', []) or [],
             task_frequency=data.get('task_frequency') or '',
@@ -337,6 +339,7 @@ async def create_or_update_rider_profile(
         'comfort_levels': None,  # Mapping naar meerdere boolean velden
         'riding_goals': 'goals',
         'discipline_preferences': 'discipline_preferences',
+        'riding_styles': 'riding_styles',
         'personality_style': 'personality_style',
         'willing_tasks': 'willing_tasks',
         'task_frequency': 'task_frequency',
@@ -620,6 +623,7 @@ async def get_rider_profile(
         },
         "riding_goals": profile.goals if profile.goals else [],
         "discipline_preferences": profile.discipline_preferences if profile.discipline_preferences else [],
+        "riding_styles": profile.riding_styles if profile.riding_styles else [],
         "personality_style": profile.personality_style if profile.personality_style else [],
         "willing_tasks": profile.willing_tasks if profile.willing_tasks else [],
         "task_frequency": profile.task_frequency,

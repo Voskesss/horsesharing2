@@ -70,6 +70,7 @@ class RiderProfile(Base):
     goals = Column(JSON, nullable=True)  # ["recreation", "training", "competition"]
     personality_style = Column(JSON, nullable=True)  # ["patient", "consistent", "playful"]
     discipline_preferences = Column(JSON, nullable=True)  # ["dressage", "jumping", "trail"]
+    riding_styles = Column(JSON, nullable=True)  # ["bitloos", "hackamore", "western", ...]
     
     # Tasks & Responsibilities
     willing_tasks = Column(JSON, nullable=True)  # ["mucking", "feeding", "grooming"]
