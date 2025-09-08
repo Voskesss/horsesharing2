@@ -198,6 +198,7 @@ async def create_or_update_rider_profile(
         import json
         raw_data = json.loads(body)
         print(f"Parsed JSON data: {raw_data}")
+        payload = raw_data if isinstance(raw_data, dict) else {}
         
         # Probeer Pydantic model
         profile_data = RiderProfileCreate(**raw_data)
@@ -490,49 +491,70 @@ async def create_or_update_rider_profile(
             except Exception:
                 pass
 
-        # Update RiderProfile fields
-        for pydantic_field, db_field in field_mapping.items():
-            if db_field and pydantic_field in data:
-                value = data[pydantic_field]
-                print(f"Processing field {pydantic_field} -> {db_field}: {value}")
-                # Partial update: alleen zetten als waarde niet None is
-                if value is not None:
-                    # serialize lists for TEXT columns
-                    if db_field in ("health_limitations", "no_gos") and isinstance(value, list):
-                        value = json.dumps(value)
-                    setattr(existing_profile, db_field, value)
-                print(f"Set {db_field} = {value}")
-        # Special mappings on UPDATE
-        data = profile_data.dict()
-        # 1) Date of birth -> date_of_birth + age
-        if data.get('date_of_birth'):
-            try:
-                from datetime import datetime, date
-                dob_str = data['date_of_birth']
-                try:
-                    dob = datetime.strptime(dob_str, "%d-%m-%Y").date()
-                except ValueError:
-                    dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
-                existing_profile.date_of_birth = dob
-                today = date.today()
-                age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-                existing_profile.age = max(age, 0)
-            except Exception as e:
-                print(f"Failed to parse date_of_birth '{data.get('date_of_birth')}': {e}")
+    if data.get('phone'):
+        current_user.phone = data['phone']
+        # Best-effort: sync telefoon naar Kinde (indien M2M creds aanwezig)
+        try:
+            m2m_client_id = os.getenv("KINDE_M2M_CLIENT_ID")
+            m2m_client_secret = os.getenv("KINDE_M2M_CLIENT_SECRET")
+            kinde_domain = os.getenv("KINDE_DOMAIN")
+            kinde_audience = os.getenv("KINDE_AUDIENCE")
+            kinde_scope = os.getenv("KINDE_M2M_SCOPE")
+            if m2m_client_id and m2m_client_secret and kinde_domain:
+                print(f"Kinde M2M token (phone): audience={kinde_audience}, scope={kinde_scope}")
+                token_resp = requests.post(
+                    f"{kinde_domain}/oauth2/token",
+                    data={
+                        "grant_type": "client_credentials",
+                        "client_id": m2m_client_id,
+                        "client_secret": m2m_client_secret,
+                        **({"audience": kinde_audience} if kinde_audience else {}),
+                        **({"scope": kinde_scope} if kinde_scope else {}),
+                    },
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    timeout=10,
+                )
+                if not token_resp.ok:
+                    print(f"Kinde M2M token FAILED status={token_resp.status_code} body={token_resp.text}")
+                if token_resp.ok:
+                    access_token = token_resp.json().get("access_token")
+                    # Endpoint met query param
+                    base_endpoint = f"{kinde_domain}/api/v1/user"
+                    try:
+                        probe = requests.get(base_endpoint, params={"id": current_user.kinde_id}, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+                        print(f"Kinde GET probe {base_endpoint}?id=... -> {probe.status_code}")
+                    except Exception as _:
+                        probe = None
+                    print(f"Kinde phone PATCH endpoint: {base_endpoint}?id={current_user.kinde_id}")
+                    print(f"Kinde phone PATCH for user={current_user.kinde_id} phone='{current_user.phone}'")
+                    patch_resp = requests.patch(
+                        base_endpoint,
+                        json={
+                            "phone_number": current_user.phone,
+                        },
+                        params={"id": current_user.kinde_id},
+                        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+                        timeout=10,
+                    )
+                    print(f"Kinde phone PATCH status={patch_resp.status_code} body={patch_resp.text}")
+            else:
+                print("Skipping Kinde phone sync: missing M2M env variables or KINDE_DOMAIN")
+        except Exception:
+            pass
 
         # 2) Availability
-        if isinstance(data.get('available_schedule'), dict):
+        if 'available_schedule' in payload and isinstance(payload.get('available_schedule'), dict):
             # prefer per-day schedule if provided
-            existing_profile.available_days = data.get('available_schedule') or {}
+            existing_profile.available_days = payload.get('available_schedule') or {}
         else:
             # fallback to arrays -> same blocks for all selected days
-            days_arr = data.get('available_days') or []
-            blocks_arr = data.get('available_time_blocks') or []
+            days_arr = payload.get('available_days') if 'available_days' in payload else (data.get('available_days') or [])
+            blocks_arr = payload.get('available_time_blocks') if 'available_time_blocks' in payload else (data.get('available_time_blocks') or [])
             if isinstance(days_arr, list) and isinstance(blocks_arr, list) and (days_arr or blocks_arr):
                 existing_profile.available_days = {d: blocks_arr for d in days_arr}
 
         # 3) Comfort: map booleans and trail_rides discipline toggle
-        comfort = data.get('comfort_levels') or {}
+        comfort = payload.get('comfort_levels') if 'comfort_levels' in payload else (data.get('comfort_levels') or {})
         if 'traffic' in comfort:
             existing_profile.comfortable_with_traffic = bool(comfort['traffic'])
         if 'outdoor_solo' in comfort:
@@ -557,16 +579,16 @@ async def create_or_update_rider_profile(
                 dp = [x for x in dp if x != 'buitenritten']
             existing_profile.discipline_preferences = dp
 
-        # 4) Activities on UPDATE
-        if 'activity_mode' in data:
-            existing_profile.activity_mode = data.get('activity_mode')
-        if 'activity_preferences' in data and isinstance(data.get('activity_preferences'), list):
-            existing_profile.activity_preferences = data.get('activity_preferences')
-        if 'mennen_experience' in data:
-            existing_profile.mennen_experience = data.get('mennen_experience')
+        # 4) Activities on UPDATE (use payload keys only)
+        if 'activity_mode' in payload:
+            existing_profile.activity_mode = payload.get('activity_mode')
+        if 'activity_preferences' in payload and isinstance(payload.get('activity_preferences'), list):
+            existing_profile.activity_preferences = payload.get('activity_preferences')
+        if 'mennen_experience' in payload:
+            existing_profile.mennen_experience = payload.get('mennen_experience')
 
         # 5) Material preferences on UPDATE
-        material = data.get('material_preferences') or {}
+        material = payload.get('material_preferences') if 'material_preferences' in payload else (data.get('material_preferences') or {})
         if 'bitless_ok' in material:
             existing_profile.bitless_ok = bool(material['bitless_ok'])
         if 'auxiliary_reins' in material and material['auxiliary_reins'] is not None:
