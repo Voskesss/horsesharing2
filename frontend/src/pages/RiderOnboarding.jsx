@@ -262,6 +262,9 @@ const RiderOnboarding = () => {
   const healthRestrictions = ['hooikoorts', 'rugproblemen', 'knieproblemen', 'allergieën', 'medicatie'];
   const noGos = ['drukke_stallen', 'avond_afspraken', 'weekenden', 'slecht_weer', 'grote_groepen'];
   const personalityStyles = ['rustig', 'energiek', 'geduldig', 'assertief', 'flexibel', 'gestructureerd'];
+  // Activiteiten keys (hergebruik voor filtering/reset)
+  const careActivityKeys = ['verzorging','grondwerk','longeren','hand_walking','pasture_turnout','medical_assist'];
+  const rideActivityKeys = ['buitenritten','dressuur_training','springen_training'];
   // Certificeringen (NL): FNRS, KNHS Dressuur en Springen
   const generalLevels = ['Beginner','Gevorderd beginner','Recreatieve ruiter','Hobby dressuur','Hobby springen'];
   const fnrsLevels = Array.from({ length: 12 }, (_, i) => `FNRS F${i + 1}`);
@@ -760,12 +763,31 @@ const RiderOnboarding = () => {
                       <button
                         key={opt.key}
                         type="button"
-                        onClick={() => setExperience({ ...experience, activity_mode: opt.key })}
+                        onClick={() => {
+                          // Reset/normaliseer afhankelijk van hoofdkeuze
+                          if (opt.key === 'care_only') {
+                            const filtered = (experience.activity_preferences || []).filter(k => careActivityKeys.includes(k));
+                            setExperience({ ...experience, activity_mode: opt.key, activity_preferences: filtered, mennen_experience: null });
+                            setGoals({ ...goals, riding_goals: [], discipline_preferences: [] });
+                          } else if (opt.key === 'ride_or_care') {
+                            // Laat subitems zoals ze zijn; wis mennen-niveau
+                            setExperience({ ...experience, activity_mode: opt.key, mennen_experience: null });
+                          } else if (opt.key === 'ride_only') {
+                            setExperience({ ...experience, activity_mode: opt.key, activity_preferences: [], mennen_experience: null });
+                            // riding goals/discipline blijven zichtbaar en behouden
+                          } else if (opt.key === 'drive_only') {
+                            setExperience({ ...experience, activity_mode: opt.key, activity_preferences: [] });
+                            setGoals({ ...goals, riding_goals: [], discipline_preferences: [] });
+                          }
+                        }}
                         className={`px-3 py-2 rounded-full border text-sm ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
                       >{opt.label}</button>
                     );
                   })}
                 </div>
+
+                {/* Subactiviteiten */}
+                <div className="text-xs text-gray-500 mb-1">Subactiviteiten</div>
 
                 {/* Activiteiten onder de modus, afhankelijk van keuze */}
                 {(() => {

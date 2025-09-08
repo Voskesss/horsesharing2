@@ -189,6 +189,8 @@ async def create_or_update_rider_profile(
     db: Session = Depends(get_db)
 ):
     """Create or update rider profile"""
+    # Defensief: zorg dat 'payload' altijd bestaat in deze scope
+    payload = {}
     try:
         # Lees raw body om te zien wat er wordt verzonden
         body = await request.body()
