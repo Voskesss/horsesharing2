@@ -1,86 +1,58 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import { createAPI } from '../utils/api';
 
 const OwnerOnboarding = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useKindeAuth();
+  const { isAuthenticated, getToken } = useKindeAuth();
+  const api = createAPI(getToken);
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6;
+  const totalSteps = 1;
 
   if (!isAuthenticated) {
     navigate('/');
     return null;
   }
 
-  // Basis informatie
+  // NAW (Owner)
   const [basicInfo, setBasicInfo] = useState({
     first_name: '',
     last_name: '',
     phone: '',
     postcode: '',
-    stable_name: '',
-    stable_address: ''
+    house_number: '',
+    city: '',
+    date_of_birth: '',
   });
 
-  // Paard informatie
-  const [horseInfo, setHorseInfo] = useState({
-    name: '',
-    age: '',
-    breed: '',
-    gender: '',
-    height: '',
-    color: '',
-    temperament: [],
-    experience_level: '',
-    disciplines: [],
-    health_notes: ''
-  });
+  // Prefill vanuit backend indien aanwezig
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!isAuthenticated) return;
+        const resp = await api.ownerProfile.get();
+        if (resp && resp.profile) {
+          setBasicInfo(prev => ({
+            ...prev,
+            first_name: (resp.user?.kinde_given_name || '').trim(),
+            last_name: (resp.user?.kinde_family_name || '').trim(),
+            phone: (resp.user?.phone || '').trim(),
+            postcode: resp.profile.postcode || '',
+            house_number: resp.profile.house_number || '',
+            city: resp.profile.city || '',
+            date_of_birth: resp.profile.date_of_birth || '',
+          }));
+        }
+      } catch (e) {
+        console.warn('Owner profile prefill failed', e);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
-  // Faciliteiten
-  const [facilities, setFacilities] = useState({
-    indoor_arena: false,
-    outdoor_arena: false,
-    trails: false,
-    jumping_course: false,
-    round_pen: false,
-    wash_area: false,
-    tack_room: false,
-    parking: false,
-    other_facilities: []
-  });
-
-  // Verwachtingen
-  const [expectations, setExpectations] = useState({
-    cost_sharing_euro: 200,
-    tasks_expected: [],
-    riding_frequency: '',
-    supervision_level: '',
-    trial_period_weeks: 4
-  });
-
-  // Beschikbaarheid
-  const [availability, setAvailability] = useState({
-    available_days: [],
-    available_times: [],
-    start_date: '',
-    arrangement_duration: 'ongoing'
-  });
-
-  // Media
-  const [media, setMedia] = useState({
-    horse_photos: [],
-    stable_photos: [],
-    video_intro_url: ''
-  });
-
-  const nextStep = () => {
-    if (currentStep < totalSteps) setCurrentStep(currentStep + 1);
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-  };
+  const nextStep = () => { if (currentStep < totalSteps) setCurrentStep(currentStep + 1); };
+  const prevStep = () => { if (currentStep > 1) setCurrentStep(currentStep - 1); };
 
   const toggleArrayItem = (array, item, setter) => {
     if (array.includes(item)) {
@@ -91,18 +63,23 @@ const OwnerOnboarding = () => {
   };
 
   const handleSubmit = async () => {
-    // TODO: Implement API call to save owner profile
-    console.log('Saving owner profile...');
-    navigate('/dashboard');
+    try {
+      await api.ownerProfile.createOrUpdate({
+        first_name: basicInfo.first_name,
+        last_name: basicInfo.last_name,
+        phone: basicInfo.phone,
+        postcode: basicInfo.postcode,
+        house_number: basicInfo.house_number,
+        city: basicInfo.city,
+        date_of_birth: basicInfo.date_of_birth,
+        // house_number/city zijn in backend nog niet gemigreerd: bewaren voor later
+        visible_radius: 10,
+      });
+      navigate('/owner/horses/new');
+    } catch (e) {
+      alert(`Opslaan mislukt: ${e.message}`);
+    }
   };
-
-  const weekDays = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
-  const timeBlocks = ['ochtend', 'middag', 'avond'];
-  const temperaments = ['rustig', 'energiek', 'speels', 'geduldig', 'gevoelig', 'dominant'];
-  const disciplines = ['dressuur', 'springen', 'eventing', 'western', 'buitenritten', 'natural_horsemanship'];
-  const expectedTasks = ['voeren', 'poetsen', 'uitrijden', 'longeren', 'stalwerk', 'transport', 'hoefverzorging'];
-  const supervisionLevels = ['zelfstandig', 'minimale_begeleiding', 'regelmatige_begeleiding', 'intensieve_begeleiding'];
-  const ridingFrequencies = ['1x_per_week', '2x_per_week', '3x_per_week', 'dagelijks', 'flexibel'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 py-12 px-4">
@@ -114,7 +91,7 @@ const OwnerOnboarding = () => {
               <span className="text-2xl">🐎</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Eigenaar Profiel</h1>
-            <p className="text-gray-600 mt-2">Vertel ons over je paard en stal voor de beste matches</p>
+            <p className="text-gray-600 mt-2">Vul je basisgegevens in en we gaan direct door naar je eerste paard.</p>
           </div>
 
           {/* Progress */}
@@ -131,12 +108,12 @@ const OwnerOnboarding = () => {
             </div>
           </div>
 
-          {/* Step 1: Basis Informatie */}
+          {/* Stap 1: NAW */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
-                Basis Informatie
+                Basisgegevens (NAW)
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -181,144 +158,40 @@ const OwnerOnboarding = () => {
                 />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Huisnummer</label>
+                  <input
+                    type="text"
+                    value={basicInfo.house_number}
+                    onChange={(e) => setBasicInfo({...basicInfo, house_number: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Plaats</label>
+                  <input
+                    type="text"
+                    value={basicInfo.city}
+                    onChange={(e) => setBasicInfo({...basicInfo, city: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stal naam</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Geboortedatum (optioneel)</label>
                 <input
-                  type="text"
-                  value={basicInfo.stable_name}
-                  onChange={(e) => setBasicInfo({...basicInfo, stable_name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stal adres</label>
-                <textarea
-                  value={basicInfo.stable_address}
-                  onChange={(e) => setBasicInfo({...basicInfo, stable_address: e.target.value})}
-                  rows={3}
+                  type="date"
+                  value={basicInfo.date_of_birth}
+                  onChange={(e) => setBasicInfo({...basicInfo, date_of_birth: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
             </div>
           )}
 
-          {/* Step 2: Paard Informatie */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">2</span>
-                Paard Informatie
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Naam</label>
-                  <input
-                    type="text"
-                    value={horseInfo.name}
-                    onChange={(e) => setHorseInfo({...horseInfo, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Leeftijd</label>
-                  <input
-                    type="number"
-                    value={horseInfo.age}
-                    onChange={(e) => setHorseInfo({...horseInfo, age: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Ras</label>
-                  <input
-                    type="text"
-                    value={horseInfo.breed}
-                    onChange={(e) => setHorseInfo({...horseInfo, breed: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Geslacht</label>
-                  <select
-                    value={horseInfo.gender}
-                    onChange={(e) => setHorseInfo({...horseInfo, gender: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  >
-                    <option value="">Selecteer...</option>
-                    <option value="merrie">Merrie</option>
-                    <option value="hengst">Hengst</option>
-                    <option value="ruin">Ruin</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Stokmaat (cm)</label>
-                  <input
-                    type="number"
-                    value={horseInfo.height}
-                    onChange={(e) => setHorseInfo({...horseInfo, height: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Kleur</label>
-                  <input
-                    type="text"
-                    value={horseInfo.color}
-                    onChange={(e) => setHorseInfo({...horseInfo, color: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Karakter</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {temperaments.map(temp => (
-                    <button
-                      key={temp}
-                      type="button"
-                      onClick={() => toggleArrayItem(horseInfo.temperament, temp, (items) => setHorseInfo({...horseInfo, temperament: items}))}
-                      className={`p-2 text-sm rounded-lg border transition-colors ${
-                        horseInfo.temperament.includes(temp)
-                          ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {temp}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Disciplines</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {disciplines.map(discipline => (
-                    <button
-                      key={discipline}
-                      type="button"
-                      onClick={() => toggleArrayItem(horseInfo.disciplines, discipline, (items) => setHorseInfo({...horseInfo, disciplines: items}))}
-                      className={`p-2 text-sm rounded-lg border transition-colors ${
-                        horseInfo.disciplines.includes(discipline)
-                          ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {discipline.replace('_', ' ')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Geen stap 2: opslaan stuurt direct door */}
 
           {/* Step 3: Verwachtingen */}
           {currentStep === 3 && (
@@ -427,21 +300,12 @@ const OwnerOnboarding = () => {
               Vorige
             </button>
             
-            {currentStep < totalSteps ? (
-              <button
-                onClick={nextStep}
-                className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-              >
-                Volgende
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 transition-colors"
-              >
-                Voltooien
-              </button>
-            )}
+            <button
+              onClick={handleSubmit}
+              className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 transition-colors"
+            >
+              Opslaan & Paard toevoegen
+            </button>
           </div>
         </div>
       </div>

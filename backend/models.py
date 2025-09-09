@@ -129,6 +129,8 @@ class OwnerProfile(Base):
     
     # Location
     postcode = Column(String(10), nullable=False)
+    house_number = Column(String(10), nullable=True)
+    city = Column(String(100), nullable=True)
     visible_radius = Column(Integer, nullable=False)  # km (3/5/10/20/30)
     
     # Availability
@@ -136,6 +138,8 @@ class OwnerProfile(Base):
     start_date = Column(DateTime, nullable=True)
     trial_period = Column(Integer, nullable=True)  # weeks
     duration = Column(String(50), nullable=True)  # temporary/ongoing
+    # Age (optional for owner)
+    date_of_birth = Column(Date, nullable=True)
     
     # Financial
     contribution_required = Column(Integer, nullable=True)  # euros per month
@@ -179,6 +183,9 @@ class HorseProfile(Base):
     video = Column(String(500), nullable=True)  # Video URL
     
     # Basic Info
+    title = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    ad_type = Column(String(20), nullable=True)  # bijrijden/verzorgen/lease
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)  # pony/horse
     height = Column(Integer, nullable=True)  # cm shoulder height
@@ -195,13 +202,17 @@ class HorseProfile(Base):
     # Character & Energy
     energy_level = Column(String(50), nullable=True)  # low/medium/high
     temperament = Column(JSON, nullable=True)  # ["calm", "sensitive", "playful"]
+    coat_colors = Column(JSON, nullable=True)  # ["vos","zwart","bruin","schimmel",...]
     triggers = Column(JSON, nullable=True)  # ["traffic", "water", "crowds"]
     enjoys = Column(JSON, nullable=True)  # ["trail_rides", "dressage", "jumping"]
     dislikes = Column(JSON, nullable=True)  # ["hard_hands", "loud_noises"]
     
     # Disciplines & Level
     disciplines = Column(JSON, nullable=True)  # {"dressage": "L1", "jumping": "80cm"}
+    level = Column(String(50), nullable=True)  # L1/L2/M/Z etc.
     max_jump_height = Column(Integer, nullable=True)  # cm
+    comfort_flags = Column(JSON, nullable=True)  # {traffic: true, outdoor_solo: true, with_other_horses: true}
+    activity_mode = Column(String(20), nullable=True)  # ground_only/ride_only/ride_or_care/care_only
     
     # Suitability
     suitable_for_beginners = Column(Boolean, default=False)
@@ -223,6 +234,9 @@ class HorseProfile(Base):
     required_tasks = Column(JSON, nullable=True)  # ["mucking", "feeding"]
     optional_tasks = Column(JSON, nullable=True)  # ["grooming", "turnout"]
     task_frequency = Column(String(50), nullable=True)
+    required_skills = Column(JSON, nullable=True)  # mirror rider general_skills
+    desired_rider_personality = Column(JSON, nullable=True)  # mirror rider personality_style
+    rules = Column(JSON, nullable=True)  # {helmet_required: true, under_18_allowed: true, contract_required: false}
     
     # Facilities
     indoor_arena = Column(Boolean, default=False)
@@ -234,6 +248,14 @@ class HorseProfile(Base):
     
     # Availability Status
     is_available = Column(Boolean, default=True)
+    # Availability details for ads
+    available_days = Column(JSON, nullable=True)
+    min_days_per_week = Column(Integer, nullable=True)
+    session_duration_min = Column(Integer, nullable=True)
+    session_duration_max = Column(Integer, nullable=True)
+    # Cost
+    cost_model = Column(String(20), nullable=True)  # per_maand | per_dag
+    cost_amount = Column(Integer, nullable=True)
     
     # No-gos
     no_gos = Column(Text, nullable=True)

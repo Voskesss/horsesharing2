@@ -7,7 +7,7 @@ import json
 import os
 import requests
 from database import get_db
-from models import User, RiderProfile
+from models import User, RiderProfile, OwnerProfile, HorseProfile
 from auth import get_current_user, get_optional_user
 import uvicorn
 
@@ -180,6 +180,309 @@ class RiderProfileCreate(BaseModel):
     photos: List[str] = []
     video_intro_url: Optional[str] = None
 
+# ---------------- Owner & Horses -----------------
+
+class OwnerProfilePayload(BaseModel):
+    # User fields (sync with Kinde like rider)
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    # Owner profile fields
+    postcode: Optional[str] = None
+    visible_radius: Optional[int] = None
+    house_number: Optional[str] = None  # future: may require migration
+    city: Optional[str] = None          # future: may require migration
+    date_of_birth: Optional[str] = None # optional, if we later want to compute age
+
+class HorsePayload(BaseModel):
+    id: Optional[int] = None  # when provided -> update
+    name: Optional[str] = None
+    type: Optional[str] = None           # pony/horse
+    height: Optional[int] = None         # cm
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    breed: Optional[str] = None
+    disciplines: Optional[dict] = None   # simple dict or list mapping
+    max_jump_height: Optional[int] = None
+    required_tasks: Optional[list] = None
+    optional_tasks: Optional[list] = None
+    task_frequency: Optional[str] = None
+    available_days: Optional[dict] = None  # same week/dayparts format as riders
+    no_gos: Optional[list] = None
+    is_available: Optional[bool] = None
+
+@app.get("/owner-profile")
+async def get_owner_profile(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Try to get latest Kinde claims for immediate reflection
+    kinde_claims = {}
+    try:
+        auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1]
+            from auth import verify_kinde_token
+            kinde_claims = verify_kinde_token(token) or {}
+    except Exception:
+        kinde_claims = {}
+
+    # Extract possible latest name/phone from claims
+    given = (kinde_claims.get("given_name") or kinde_claims.get("first_name") or "").strip()
+    family = (kinde_claims.get("family_name") or kinde_claims.get("last_name") or "").strip()
+    full_claim_name = (given + (" " + family if family else "")).strip() or (kinde_claims.get("name") or "").strip()
+    claim_phone = (kinde_claims.get("phone_number") or "").strip()
+
+    # Best-effort: sync local user record if claims provide fresher values
+    updated = False
+    if full_claim_name and (current_user.name or "").strip() != full_claim_name:
+        current_user.name = full_claim_name
+        updated = True
+    if claim_phone and (current_user.phone or "").strip() != claim_phone:
+        current_user.phone = claim_phone
+        updated = True
+    if updated:
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+
+    owner = db.query(OwnerProfile).filter(OwnerProfile.user_id == current_user.id).first()
+    if not owner:
+        return {
+            "exists": False,
+            "user": {
+                "name": full_claim_name or current_user.name,
+                "email": current_user.email,
+                "phone": claim_phone or current_user.phone,
+                "kinde_given_name": given,
+                "kinde_family_name": family,
+            },
+            "profile": {}
+        }
+    return {
+        "exists": True,
+        "user": {
+            "name": full_claim_name or current_user.name,
+            "email": current_user.email,
+            "phone": claim_phone or current_user.phone,
+            "kinde_given_name": given,
+            "kinde_family_name": family,
+        },
+        "profile": {
+            "postcode": owner.postcode,
+            "house_number": owner.house_number,
+            "city": owner.city,
+            "visible_radius": owner.visible_radius,
+            "available_days": owner.available_days or {},
+            "duration": owner.duration,
+            "date_of_birth": owner.date_of_birth.isoformat() if owner.date_of_birth else None,
+        }
+    }
+
+@app.post("/owner-profile")
+async def create_or_update_owner_profile(
+    payload: OwnerProfilePayload,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    owner = db.query(OwnerProfile).filter(OwnerProfile.user_id == current_user.id).first()
+    if not owner:
+        owner = OwnerProfile(
+            user_id=current_user.id,
+            postcode=payload.postcode or "",
+            visible_radius=(payload.visible_radius if payload.visible_radius is not None else 10),
+            available_days={},
+            duration=None,
+        )
+        db.add(owner)
+    else:
+        # payload-gedreven updates
+        if payload.postcode is not None:
+            owner.postcode = payload.postcode
+        if payload.visible_radius is not None:
+            try:
+                owner.visible_radius = int(payload.visible_radius)
+            except Exception:
+                pass
+    # New fields now supported
+    if hasattr(payload, 'house_number') and payload.house_number is not None:
+        owner.house_number = payload.house_number
+    if hasattr(payload, 'city') and payload.city is not None:
+        owner.city = payload.city
+    if hasattr(payload, 'date_of_birth') and payload.date_of_birth is not None:
+        try:
+            # Accept YYYY-MM-DD
+            from datetime import datetime
+            owner.date_of_birth = datetime.strptime(payload.date_of_birth, "%Y-%m-%d").date()
+        except Exception:
+            pass
+
+    # Update User fields (name/phone) and sync to Kinde like rider flow
+    name_updated = False
+    if (payload.first_name or payload.last_name):
+        parts = []
+        if payload.first_name: parts.append(payload.first_name)
+        if payload.last_name: parts.append(payload.last_name)
+        new_name = " ".join(parts).strip()
+        if new_name:
+            current_user.name = new_name
+            name_updated = True
+    if payload.phone is not None:
+        current_user.phone = payload.phone
+
+    # Best-effort Kinde Management API sync
+    try:
+        m2m_client_id = os.getenv("KINDE_M2M_CLIENT_ID")
+        m2m_client_secret = os.getenv("KINDE_M2M_CLIENT_SECRET")
+        kinde_domain = os.getenv("KINDE_DOMAIN")
+        kinde_audience = os.getenv("KINDE_AUDIENCE")
+        kinde_scope = os.getenv("KINDE_M2M_SCOPE")
+        if m2m_client_id and m2m_client_secret and kinde_domain:
+            token_resp = requests.post(
+                f"{kinde_domain}/oauth2/token",
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": m2m_client_id,
+                    "client_secret": m2m_client_secret,
+                    **({"audience": kinde_audience} if kinde_audience else {}),
+                    **({"scope": kinde_scope} if kinde_scope else {}),
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+            if token_resp.ok:
+                access_token = token_resp.json().get("access_token")
+                base_endpoint = f"{kinde_domain}/api/v1/user"
+                # sync name
+                if name_updated and current_user.name:
+                    parts = current_user.name.strip().split(" ", 1)
+                    given = parts[0] if parts else ""
+                    family = parts[1] if len(parts) > 1 else ""
+                    requests.patch(
+                        base_endpoint,
+                        json={
+                            "first_name": given,
+                            "last_name": family,
+                            "given_name": given,
+                            "family_name": family,
+                            "name": current_user.name,
+                        },
+                        params={"id": current_user.kinde_id},
+                        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+                        timeout=10,
+                    )
+                # sync phone
+                if payload.phone is not None:
+                    requests.patch(
+                        base_endpoint,
+                        json={"phone_number": current_user.phone},
+                        params={"id": current_user.kinde_id},
+                        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+                        timeout=10,
+                    )
+    except Exception:
+        pass
+
+    db.commit()
+    db.refresh(owner)
+    return {"message": "Owner profile saved", "owner_profile_id": owner.id}
+
+@app.get("/owner/horses")
+async def list_owner_horses(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    owner = db.query(OwnerProfile).filter(OwnerProfile.user_id == current_user.id).first()
+    if not owner:
+        return {"horses": []}
+    horses = db.query(HorseProfile).filter(HorseProfile.owner_profile_id == owner.id).all()
+    return {
+        "horses": [
+            {
+                "id": h.id,
+                "name": h.name,
+                "type": h.type,
+                "height": h.height,
+                "age": h.age,
+                "gender": h.gender,
+                "breed": h.breed,
+                "disciplines": h.disciplines or {},
+                "max_jump_height": h.max_jump_height,
+                "required_tasks": h.required_tasks or [],
+                "optional_tasks": h.optional_tasks or [],
+                "task_frequency": h.task_frequency,
+                "available_days": h.available_days or {},
+                "no_gos": (json.loads(h.no_gos) if isinstance(h.no_gos, str) and h.no_gos else []),
+                "is_available": h.is_available,
+            } for h in horses
+        ]
+    }
+
+@app.post("/owner/horses")
+async def create_or_update_horse(
+    payload: HorsePayload,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    owner = db.query(OwnerProfile).filter(OwnerProfile.user_id == current_user.id).first()
+    if not owner:
+        # maak owner profiel minimaal als het nog niet bestaat
+        owner = OwnerProfile(user_id=current_user.id, postcode="", visible_radius=10, available_days={})
+        db.add(owner)
+        db.commit()
+        db.refresh(owner)
+
+    if payload.id:
+        horse = db.query(HorseProfile).filter(HorseProfile.id == payload.id, HorseProfile.owner_profile_id == owner.id).first()
+        if not horse:
+            raise HTTPException(status_code=404, detail="Horse not found")
+    else:
+        horse = HorseProfile(owner_profile_id=owner.id, name=payload.name or "", type=payload.type or "pony")
+        db.add(horse)
+
+    # payload-gedreven updates
+    if payload.name is not None:
+        horse.name = payload.name
+    if payload.type is not None:
+        horse.type = payload.type
+    if payload.height is not None:
+        try:
+            horse.height = int(payload.height)
+        except Exception:
+            pass
+    if payload.age is not None:
+        try:
+            horse.age = int(payload.age)
+        except Exception:
+            pass
+    if payload.gender is not None:
+        horse.gender = payload.gender
+    if payload.breed is not None:
+        horse.breed = payload.breed
+    if payload.disciplines is not None:
+        horse.disciplines = payload.disciplines
+    if payload.max_jump_height is not None:
+        try:
+            horse.max_jump_height = int(payload.max_jump_height)
+        except Exception:
+            pass
+    if payload.required_tasks is not None:
+        horse.required_tasks = payload.required_tasks
+    if payload.optional_tasks is not None:
+        horse.optional_tasks = payload.optional_tasks
+    if payload.task_frequency is not None:
+        horse.task_frequency = payload.task_frequency
+    if payload.available_days is not None and isinstance(payload.available_days, dict):
+        horse.available_days = payload.available_days
+    if payload.no_gos is not None:
+        horse.no_gos = json.dumps(payload.no_gos)
+    if payload.is_available is not None:
+        horse.is_available = bool(payload.is_available)
+
+    db.commit()
+    db.refresh(horse)
+    return {"message": "Horse saved", "horse_id": horse.id}
 # Let only one GET endpoint exist (frontend-shaped response)
 
 @app.post("/rider-profile")

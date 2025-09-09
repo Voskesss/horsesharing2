@@ -7,6 +7,7 @@ import ProfileChoice from './pages/ProfileChoice';
 import RiderOnboarding from './pages/RiderOnboarding';
 import RiderProfile from './pages/RiderProfile';
 import OwnerOnboarding from './pages/OwnerOnboarding';
+import HorseAdWizard from './pages/HorseAdWizard';
 import Dashboard from './pages/Dashboard';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/rider-onboarding" element={<RiderOnboarding />} />
             <Route path="/rider-profile" element={<RiderProfile />} />
             <Route path="/owner-onboarding" element={<OwnerOnboarding />} />
+            <Route path="/owner/horses/new" element={<HorseAdWizard />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </div>

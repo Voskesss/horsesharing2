@@ -59,6 +59,36 @@ export const createAPI = (getToken) => ({
     },
   },
 
+  // Owner Profile API calls
+  ownerProfile: {
+    async get() {
+      const token = await getToken();
+      return apiCall('/owner-profile', {}, token);
+    },
+    async createOrUpdate(data) {
+      const token = await getToken();
+      return apiCall('/owner-profile', {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+      }, token);
+    },
+  },
+
+  // Owner Horses (advertenties per paard)
+  ownerHorses: {
+    async list() {
+      const token = await getToken();
+      return apiCall('/owner/horses', {}, token);
+    },
+    async createOrUpdate(horse) {
+      const token = await getToken();
+      return apiCall('/owner/horses', {
+        method: 'POST',
+        body: JSON.stringify(horse || {}),
+      }, token);
+    },
+  },
+
   // User API calls
   user: {
     // Haal huidige user info op
