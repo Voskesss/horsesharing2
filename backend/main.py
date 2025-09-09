@@ -258,6 +258,9 @@ async def create_or_update_rider_profile(
             health_limitations=json.dumps(data.get('health_restrictions', [])),
             parent_consent=data.get('parent_consent') if 'parent_consent' in data else None,
             parent_contact=data.get('parent_contact') if 'parent_contact' in data else None,
+            rider_height_cm=(int(data['rider_height_cm']) if str(data.get('rider_height_cm') or '').strip() != '' else None),
+            rider_weight_kg=(int(data['rider_weight_kg']) if str(data.get('rider_weight_kg') or '').strip() != '' else None),
+            rider_bio=data.get('rider_bio') or None,
         )
 
         # Comfort levels mapping
@@ -572,6 +575,9 @@ async def create_or_update_rider_profile(
             'no_gos': 'no_gos',
             'parent_consent': 'parent_consent',
             'parent_contact': 'parent_contact',
+            'rider_height_cm': 'rider_height_cm',
+            'rider_weight_kg': 'rider_weight_kg',
+            'rider_bio': 'rider_bio',
         }
         for src, dest in direct_map.items():
             if src in payload:
@@ -582,6 +588,11 @@ async def create_or_update_rider_profile(
                         val = int(val) if val is not None else None
                     except Exception:
                         pass
+                if dest in ('rider_height_cm','rider_weight_kg'):
+                    try:
+                        val = int(val) if (val is not None and str(val).strip() != '') else None
+                    except Exception:
+                        val = None
                 if dest in ('has_insurance',):
                     val = bool(val)
                 if dest in ('health_limitations', 'no_gos') and isinstance(val, list):
@@ -608,6 +619,9 @@ async def create_or_update_rider_profile(
         # 1b) Lease preferences (JSON dict)
         if 'lease_preferences' in payload and isinstance(payload.get('lease_preferences'), dict):
             existing_profile.lease_preferences = payload.get('lease_preferences')
+        # 1c) Desired horse (JSON dict)
+        if 'desired_horse' in payload and isinstance(payload.get('desired_horse'), dict):
+            existing_profile.desired_horse = payload.get('desired_horse')
 
         # 2) Availability
         if 'available_schedule' in payload and isinstance(payload.get('available_schedule'), dict):
@@ -809,6 +823,10 @@ async def get_rider_profile(
         "video_intro_url": profile.video_intro,
         "parent_consent": profile.parent_consent,
         "parent_contact": profile.parent_contact,
+        "rider_height_cm": profile.rider_height_cm,
+        "rider_weight_kg": profile.rider_weight_kg,
+        "rider_bio": profile.rider_bio,
+        "desired_horse": profile.desired_horse or {},
         "created_at": profile.created_at,
         "updated_at": profile.updated_at
     }

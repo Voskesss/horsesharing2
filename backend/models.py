@@ -100,6 +100,12 @@ class RiderProfile(Base):
     age = Column(Integer, nullable=False)
     parent_consent = Column(Boolean, nullable=True)  # For under 18
     parent_contact = Column(String(255), nullable=True)
+    # Rider body & bio
+    rider_height_cm = Column(Integer, nullable=True)
+    rider_weight_kg = Column(Integer, nullable=True)
+    rider_bio = Column(Text, nullable=True)
+    # Desired horse preferences (JSON blob)
+    desired_horse = Column(JSON, nullable=True)
     
     # Insurance
     has_insurance = Column(Boolean, default=False)
