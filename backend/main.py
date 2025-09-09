@@ -196,6 +196,9 @@ class OwnerProfilePayload(BaseModel):
 
 class HorsePayload(BaseModel):
     id: Optional[int] = None  # when provided -> update
+    title: Optional[str] = None
+    description: Optional[str] = None
+    ad_type: Optional[str] = None           # bijrijden/verzorgen/lease
     name: Optional[str] = None
     type: Optional[str] = None           # pony/horse
     height: Optional[int] = None         # cm
@@ -208,6 +211,18 @@ class HorsePayload(BaseModel):
     optional_tasks: Optional[list] = None
     task_frequency: Optional[str] = None
     available_days: Optional[dict] = None  # same week/dayparts format as riders
+    min_days_per_week: Optional[int] = None
+    session_duration_min: Optional[int] = None
+    session_duration_max: Optional[int] = None
+    cost_model: Optional[str] = None
+    cost_amount: Optional[int] = None
+    coat_colors: Optional[list] = None
+    level: Optional[str] = None
+    comfort_flags: Optional[dict] = None
+    activity_mode: Optional[str] = None
+    required_skills: Optional[list] = None
+    desired_rider_personality: Optional[list] = None
+    rules: Optional[dict] = None
     no_gos: Optional[list] = None
     is_available: Optional[bool] = None
 
@@ -401,6 +416,8 @@ async def list_owner_horses(
         "horses": [
             {
                 "id": h.id,
+                "title": h.title,
+                "ad_type": h.ad_type,
                 "name": h.name,
                 "type": h.type,
                 "height": h.height,
@@ -409,10 +426,12 @@ async def list_owner_horses(
                 "breed": h.breed,
                 "disciplines": h.disciplines or {},
                 "max_jump_height": h.max_jump_height,
+                "level": h.level,
                 "required_tasks": h.required_tasks or [],
                 "optional_tasks": h.optional_tasks or [],
                 "task_frequency": h.task_frequency,
                 "available_days": h.available_days or {},
+                "min_days_per_week": h.min_days_per_week,
                 "no_gos": (json.loads(h.no_gos) if isinstance(h.no_gos, str) and h.no_gos else []),
                 "is_available": h.is_available,
             } for h in horses
@@ -442,6 +461,12 @@ async def create_or_update_horse(
         db.add(horse)
 
     # payload-gedreven updates
+    if payload.title is not None:
+        horse.title = payload.title
+    if payload.description is not None:
+        horse.description = payload.description
+    if payload.ad_type is not None:
+        horse.ad_type = payload.ad_type
     if payload.name is not None:
         horse.name = payload.name
     if payload.type is not None:
@@ -462,11 +487,17 @@ async def create_or_update_horse(
         horse.breed = payload.breed
     if payload.disciplines is not None:
         horse.disciplines = payload.disciplines
+    if payload.level is not None:
+        horse.level = payload.level
     if payload.max_jump_height is not None:
         try:
             horse.max_jump_height = int(payload.max_jump_height)
         except Exception:
             pass
+    if payload.coat_colors is not None:
+        horse.coat_colors = payload.coat_colors
+    if payload.temperament is not None:
+        horse.temperament = payload.temperament
     if payload.required_tasks is not None:
         horse.required_tasks = payload.required_tasks
     if payload.optional_tasks is not None:
@@ -475,6 +506,32 @@ async def create_or_update_horse(
         horse.task_frequency = payload.task_frequency
     if payload.available_days is not None and isinstance(payload.available_days, dict):
         horse.available_days = payload.available_days
+    if payload.min_days_per_week is not None:
+        try:
+            horse.min_days_per_week = int(payload.min_days_per_week)
+        except Exception:
+            pass
+    if payload.session_duration_min is not None:
+        horse.session_duration_min = payload.session_duration_min
+    if payload.session_duration_max is not None:
+        horse.session_duration_max = payload.session_duration_max
+    if payload.cost_model is not None:
+        horse.cost_model = payload.cost_model
+    if payload.cost_amount is not None:
+        try:
+            horse.cost_amount = int(payload.cost_amount)
+        except Exception:
+            pass
+    if payload.comfort_flags is not None:
+        horse.comfort_flags = payload.comfort_flags
+    if payload.activity_mode is not None:
+        horse.activity_mode = payload.activity_mode
+    if payload.required_skills is not None:
+        horse.required_skills = payload.required_skills
+    if payload.desired_rider_personality is not None:
+        horse.desired_rider_personality = payload.desired_rider_personality
+    if payload.rules is not None:
+        horse.rules = payload.rules
     if payload.no_gos is not None:
         horse.no_gos = json.dumps(payload.no_gos)
     if payload.is_available is not None:
