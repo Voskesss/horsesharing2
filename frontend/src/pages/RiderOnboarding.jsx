@@ -9,6 +9,8 @@ const RiderOnboarding = () => {
   const { isAuthenticated, getToken } = useKindeAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
+  // Simple toast state
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
   const totalSteps = 9;
 
   if (!isAuthenticated) {
@@ -24,7 +26,10 @@ const RiderOnboarding = () => {
     date_of_birth: '',
     postcode: '',
     max_travel_distance_km: 25,
-    transport_options: []
+    transport_options: [],
+    parent_consent: null,
+    parent_contact_name: '',
+    parent_contact_email: '',
   });
 
   // Beschikbaarheid
@@ -154,6 +159,21 @@ const RiderOnboarding = () => {
     media
   };
   const progressPercentage = calculateRiderProfileProgress(profileData);
+
+  // Helper: bereken leeftijd op basis van geboortedatum
+  const calculateAge = (dobStr) => {
+    if (!dobStr) return null;
+    try {
+      const dob = new Date(dobStr);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+      return age;
+    } catch {
+      return null;
+    }
+  };
 
   // Auto-save functie
   const autoSave = async () => {
@@ -307,8 +327,34 @@ const RiderOnboarding = () => {
     };
   }, [progressPercentage, loading, getToken]);
 
+  // Toast helper
+  const showToast = (message, type = 'info', durationMs = 3000) => {
+    setToast({ visible: true, message, type });
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast(prev => ({ ...prev, visible: false })), durationMs);
+  };
+
   const handleSubmit = async () => {
     try {
+      // Validatie: minderjarig (<=16) begeleiding verplicht
+      const age = calculateAge(basicInfo.date_of_birth);
+      if (age !== null && age <= 16) {
+        if (basicInfo.parent_consent === null) {
+          setCurrentStep(1);
+          alert('Begeleiding: kies Ja of Nee.');
+          return;
+        }
+        if (basicInfo.parent_consent === true) {
+          const nameOk = !!(basicInfo.parent_contact_name && basicInfo.parent_contact_name.trim());
+          const emailOk = !!(basicInfo.parent_contact_email && basicInfo.parent_contact_email.trim());
+          if (!nameOk || !emailOk) {
+            setCurrentStep(1);
+            alert('Vul a.u.b. naam en e‑mail van de begeleider in.');
+            return;
+          }
+        }
+      }
+
       const api = createAPI(getToken);
       const apiData = transformProfileDataForAPI(profileData);
       await api.riderProfile.createOrUpdate(apiData);
@@ -325,10 +371,10 @@ const RiderOnboarding = () => {
       const api = createAPI(getToken);
       const apiData = transformProfileDataForAPI(profileData);
       await api.riderProfile.createOrUpdate(apiData);
-      alert('Concept opgeslagen! Je kunt later verder gaan.');
+      showToast('Concept opgeslagen');
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('Er ging iets mis bij het opslaan van het concept.');
+      showToast('Opslaan concept mislukt', 'error');
     }
   };
 
@@ -364,16 +410,26 @@ const RiderOnboarding = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">🏇</span>
+    <div className="max-w-5xl mx-auto p-4 md:p-6">
+      {/* Toast */}
+      {toast.visible && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm
+          ${toast.type === 'error' ? 'bg-red-600 text-white' : toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-gray-900 text-white'}`}
+        >
+          {toast.message}
+        </div>
+      )}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">🏇</span>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">Ruiter Profiel</h1>
+              <p className="text-gray-600 mt-2">Vertel ons alles over jezelf voor de beste matches</p>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Ruiter Profiel</h1>
-            <p className="text-gray-600 mt-2">Vertel ons alles over jezelf voor de beste matches</p>
           </div>
 
           {/* Progress */}
@@ -436,9 +492,62 @@ const RiderOnboarding = () => {
                 <input
                   type="date"
                   value={basicInfo.date_of_birth}
-                  onChange={(e) => setBasicInfo({...basicInfo, date_of_birth: e.target.value})}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, date_of_birth: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {(() => {
+                  const age = calculateAge(basicInfo.date_of_birth);
+                  if (age !== null && age <= 16) {
+                    return (
+                      <div className="mt-3">
+                        <div className="text-sm text-gray-700 mb-2">Gaat er een volwassene mee als begeleiding?</div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setBasicInfo({ ...basicInfo, parent_consent: true })}
+                            className={`px-3 py-2 rounded-full border text-sm ${basicInfo.parent_consent === true ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                          >Ja</button>
+                          <button
+                            type="button"
+                            onClick={() => setBasicInfo({ ...basicInfo, parent_consent: false })}
+                            className={`px-3 py-2 rounded-full border text-sm ${basicInfo.parent_consent === false ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                          >Nee</button>
+                        </div>
+                        {basicInfo.parent_consent === true && (
+                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Naam begeleider</label>
+                              <input
+                                type="text"
+                                value={basicInfo.parent_contact_name}
+                                onChange={(e) => setBasicInfo({ ...basicInfo, parent_contact_name: e.target.value })}
+                                placeholder="Voor- en achternaam"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                              {(!basicInfo.parent_contact_name?.trim()) && (
+                                <p className="mt-1 text-xs text-red-600">Vul de naam van de begeleider in.</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">E‑mail begeleider</label>
+                              <input
+                                type="email"
+                                value={basicInfo.parent_contact_email}
+                                onChange={(e) => setBasicInfo({ ...basicInfo, parent_contact_email: e.target.value })}
+                                placeholder="naam@voorbeeld.nl"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                              {(!basicInfo.parent_contact_email?.trim()) && (
+                                <p className="mt-1 text-xs text-red-600">Vul het e‑mailadres van de begeleider in.</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

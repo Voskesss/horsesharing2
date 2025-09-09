@@ -147,8 +147,18 @@ export function transformProfileDataForAPI(profileData) {
   add('phone', basicInfo.phone);
   add('date_of_birth', basicInfo.date_of_birth);
   add('postcode', basicInfo.postcode);
+  add('house_number', basicInfo.house_number);
+  add('city', basicInfo.city);
   add('max_travel_distance_km', basicInfo.max_travel_distance_km);
   add('transport_options', Array.isArray(basicInfo.transport_options) ? basicInfo.transport_options : []);
+  // Minderjarigen begeleiding
+  add('parent_consent', basicInfo.parent_consent, { allowFalse: true });
+  if (basicInfo.parent_contact_name || basicInfo.parent_contact_email) {
+    const name = (basicInfo.parent_contact_name || '').trim();
+    const email = (basicInfo.parent_contact_email || '').trim();
+    const combined = email ? `${name}${name ? ' ' : ''}<${email}>` : name;
+    add('parent_contact', combined);
+  }
 
   // Beschikbaarheid
   const hasScheduleObj = availability.available_schedule && typeof availability.available_schedule === 'object' && Object.keys(availability.available_schedule).length > 0;
@@ -276,8 +286,19 @@ export function transformProfileDataFromAPI(apiData) {
       phone: apiData.phone || '',
       date_of_birth: apiData.date_of_birth || '',
       postcode: apiData.postcode || '',
-      max_travel_distance_km: apiData.max_travel_distance || apiData.max_travel_distance_km || 25,
-      transport_options: parseJSONArray(apiData.transport_options)
+      house_number: apiData.house_number || '',
+      city: apiData.city || '',
+      max_travel_distance_km: apiData.max_travel_distance_km || apiData.max_travel_distance || 25,
+      transport_options: Array.isArray(apiData.transport_options) ? apiData.transport_options : [],
+      parent_consent: (apiData.parent_consent === true || apiData.parent_consent === false) ? apiData.parent_consent : null,
+      ...(() => {
+        const raw = apiData.parent_contact || '';
+        const m = raw.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+        if (m) {
+          return { parent_contact_name: m[1] || '', parent_contact_email: m[2] || '' };
+        }
+        return { parent_contact_name: raw || '', parent_contact_email: '' };
+      })()
     },
     availability: {
       available_days: parseJSONArray(apiData.available_days),

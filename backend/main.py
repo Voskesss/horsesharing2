@@ -256,6 +256,8 @@ async def create_or_update_rider_profile(
             has_insurance=bool(data.get('insurance_coverage')),
             no_gos=json.dumps(data.get('no_gos', [])),
             health_limitations=json.dumps(data.get('health_restrictions', [])),
+            parent_consent=data.get('parent_consent') if 'parent_consent' in data else None,
+            parent_contact=data.get('parent_contact') if 'parent_contact' in data else None,
         )
 
         # Comfort levels mapping
@@ -568,6 +570,8 @@ async def create_or_update_rider_profile(
             'insurance_coverage': 'has_insurance',
             'health_restrictions': 'health_limitations',
             'no_gos': 'no_gos',
+            'parent_consent': 'parent_consent',
+            'parent_contact': 'parent_contact',
         }
         for src, dest in direct_map.items():
             if src in payload:
@@ -583,6 +587,23 @@ async def create_or_update_rider_profile(
                 if dest in ('health_limitations', 'no_gos') and isinstance(val, list):
                     val = json.dumps(val)
                 setattr(existing_profile, dest, val)
+
+        # Speciaal: geboortedatum en leeftijd bijwerken indien meegegeven
+        if 'date_of_birth' in payload:
+            dob_str = payload.get('date_of_birth')
+            if dob_str:
+                try:
+                    from datetime import datetime, date
+                    try:
+                        dob = datetime.strptime(dob_str, "%d-%m-%Y").date()
+                    except ValueError:
+                        dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+                    existing_profile.date_of_birth = dob
+                    today = date.today()
+                    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+                    existing_profile.age = max(age, 0)
+                except Exception as e:
+                    print(f"Failed to parse date_of_birth on update '{dob_str}': {e}")
 
         # 1b) Lease preferences (JSON dict)
         if 'lease_preferences' in payload and isinstance(payload.get('lease_preferences'), dict):
@@ -786,6 +807,8 @@ async def get_rider_profile(
         "no_gos": (json.loads(profile.no_gos) if isinstance(profile.no_gos, str) and profile.no_gos else []),
         "photos": profile.photos if profile.photos else [],
         "video_intro_url": profile.video_intro,
+        "parent_consent": profile.parent_consent,
+        "parent_contact": profile.parent_contact,
         "created_at": profile.created_at,
         "updated_at": profile.updated_at
     }
