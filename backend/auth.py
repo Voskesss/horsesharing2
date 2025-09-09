@@ -53,33 +53,37 @@ def get_current_user(
     
     # Get or create user in our database
     user = db.query(User).filter(User.kinde_id == kinde_user["id"]).first()
-    
+
+    # Prepare robust fields from Kinde
+    given = (kinde_user.get("given_name") or kinde_user.get("first_name") or "").strip()
+    family = (kinde_user.get("family_name") or kinde_user.get("last_name") or "").strip()
+    full_claim_name = (kinde_user.get("name") or "").strip()
+    username = (kinde_user.get("username") or "").strip()
+    token_name = (given + (" " + family if family else "")).strip() or full_claim_name or username or "User"
+
+    token_phone = kinde_user.get("phone_number")
+
+    # Email: prefer email/preferred_email; else construct unique placeholder from Kinde ID
+    token_email = (kinde_user.get("email") or kinde_user.get("preferred_email") or "").strip()
+    if not token_email:
+        kid = (kinde_user.get("id") or "anon").strip()
+        base = username if username else kid
+        # guaranteed-unique placeholder (per tenant) using Kinde ID
+        token_email = f"{base}@noemail.kinde"
+
     if not user:
-        # Create new user from Kinde data
+        # Create new user from Kinde data (with robust fallbacks)
         user = User(
             kinde_id=kinde_user["id"],
-            email=kinde_user.get("email", ""),
-            name=kinde_user.get("given_name", "") + " " + kinde_user.get("family_name", ""),
-            phone=kinde_user.get("phone_number")
+            email=token_email,
+            name=token_name,
+            phone=token_phone
         )
         db.add(user)
         db.commit()
         db.refresh(user)
     else:
         # Kinde leading: sync DB with token claims if different
-        # Fallbacks: sommige tenants gebruiken first_name/last_name i.p.v. given_name/family_name
-        given = (kinde_user.get("given_name") or kinde_user.get("first_name") or "").strip()
-        family = (kinde_user.get("family_name") or kinde_user.get("last_name") or "").strip()
-        if not given and not family:
-            # laatste redmiddel: splits volledige naam
-            full = (kinde_user.get("name") or "").strip()
-            if full:
-                parts = full.split(" ", 1)
-                given = parts[0]
-                family = parts[1] if len(parts) > 1 else ""
-        token_name = (given + (" " + family if family else "")).strip()
-        token_phone = kinde_user.get("phone_number")
-
         updated = False
         if token_name and token_name != (user.name or "").strip():
             user.name = token_name
@@ -87,6 +91,12 @@ def get_current_user(
         if token_phone and token_phone != (user.phone or ""):
             user.phone = token_phone
             updated = True
+        # If our stored email is empty/placeholder and we get a better one, update it
+        if token_email and token_email != (user.email or "").strip():
+            # only update if existing email looks like placeholder or empty
+            if not user.email or user.email.endswith("@noemail.kinde"):
+                user.email = token_email
+                updated = True
         if updated:
             db.commit()
             db.refresh(user)
