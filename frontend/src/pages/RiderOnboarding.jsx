@@ -11,7 +11,7 @@ const RiderOnboarding = () => {
   const [loading, setLoading] = useState(true);
   // Simple toast state
   const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
-  const totalSteps = 9;
+  const totalSteps = 10;
 
   if (!isAuthenticated) {
     navigate('/');
@@ -30,6 +30,9 @@ const RiderOnboarding = () => {
     parent_consent: null,
     parent_contact_name: '',
     parent_contact_email: '',
+    rider_height_cm: '',
+    rider_weight_kg: '',
+    rider_bio: '',
   });
 
   // Beschikbaarheid
@@ -108,7 +111,24 @@ const RiderOnboarding = () => {
     health_restrictions: [],
     insurance_coverage: false,
     no_gos: [],
-    riding_styles: []
+    riding_styles: [],
+    desired_horse: {
+      type: [], // ['pony','paard']
+      schofthoogte_cm_min: '',
+      schofthoogte_cm_max: '',
+      geslacht: [], // ['merrie','ruin','hengst']
+      leeftijd_min: '',
+      leeftijd_max: '',
+      ras: '',
+      stamboek: '',
+      disciplines_paard: [],
+      handgevoeligheid: '', // 'zachte_hand'|'neutraal'|'sterke_hand'
+      temperament: [],
+      vergevingsgezindheid: '', // 'laag'|'gemiddeld'|'hoog'
+      ervaring_rijder_nodig: '', // 'beginner_ok'|'licht_gevorderd'|'gevorderd'|'zeer_ervaren'
+      vachtkleuren: [],
+      niet_belangrijk_vachtkleur: false,
+    }
   });
 
   // Gezondheid gating en vrije tekst (afgeleid van preferences)
@@ -550,6 +570,48 @@ const RiderOnboarding = () => {
                 })()}
               </div>
 
+              {/* Lengte & Gewicht */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Lengte (cm)</label>
+                  <input
+                    type="number"
+                    min={100}
+                    max={220}
+                    value={basicInfo.rider_height_cm}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, rider_height_cm: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                    placeholder="bijv. 175"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gewicht (kg)</label>
+                  <input
+                    type="number"
+                    min={30}
+                    max={150}
+                    value={basicInfo.rider_weight_kg}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, rider_weight_kg: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                    placeholder="bijv. 68"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Over mij */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Over mij</label>
+                <textarea
+                  rows={4}
+                  maxLength={1000}
+                  value={basicInfo.rider_bio}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, rider_bio: e.target.value })}
+                  placeholder="Vertel iets over jezelf, ervaring en wat je zoekt..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Max. 1000 tekens</p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Postcode</label>
@@ -592,6 +654,7 @@ const RiderOnboarding = () => {
                 </div>
               </div>
 
+              {/* (opgeruimd) geen placeholders meer hier */}
             </div>
           )}
 
@@ -747,11 +810,11 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 6: Ervaring */}
-          {currentStep === 6 && (
+          {/* Step 7: Ervaring */}
+          {currentStep === 7 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">6</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">7</span>
                 Ervaring
               </h2>
 
@@ -947,11 +1010,229 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 4: Doelen */}
+          {/* Step 4: Gewenste paard */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">4</span>
+                Gewenste paard/pony
+              </h2>
+
+              {/* Type en Schofthoogte */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['pony','paard'].map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          const has = preferences.desired_horse.type.includes(t);
+                          const next = has ? preferences.desired_horse.type.filter(x => x !== t) : [...preferences.desired_horse.type, t];
+                          setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, type: next }});
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${preferences.desired_horse.type.includes(t) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{t}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Schofthoogte min (cm)</label>
+                  <input
+                    type="number"
+                    min={80}
+                    max={190}
+                    value={preferences.desired_horse.schofthoogte_cm_min}
+                    onChange={(e) => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, schofthoogte_cm_min: e.target.value === '' ? '' : parseInt(e.target.value) } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Schofthoogte max (cm)</label>
+                  <input
+                    type="number"
+                    min={80}
+                    max={210}
+                    value={preferences.desired_horse.schofthoogte_cm_max}
+                    onChange={(e) => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, schofthoogte_cm_max: e.target.value === '' ? '' : parseInt(e.target.value) } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Geslacht en Leeftijd */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Geslacht</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['merrie','ruin','hengst'].map(g => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => {
+                          const has = preferences.desired_horse.geslacht.includes(g);
+                          const next = has ? preferences.desired_horse.geslacht.filter(x => x !== g) : [...preferences.desired_horse.geslacht, g];
+                          setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, geslacht: next }});
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${preferences.desired_horse.geslacht.includes(g) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{g}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Leeftijd min</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={40}
+                    value={preferences.desired_horse.leeftijd_min}
+                    onChange={(e) => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, leeftijd_min: e.target.value === '' ? '' : parseInt(e.target.value) } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Leeftijd max</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={45}
+                    value={preferences.desired_horse.leeftijd_max}
+                    onChange={(e) => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, leeftijd_max: e.target.value === '' ? '' : parseInt(e.target.value) } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Ras / Stamboek */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Ras</label>
+                  <input
+                    type="text"
+                    value={preferences.desired_horse.ras}
+                    onChange={(e) => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, ras: e.target.value } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Stamboek</label>
+                  <input
+                    type="text"
+                    value={preferences.desired_horse.stamboek}
+                    onChange={(e) => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, stamboek: e.target.value } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Disciplines paard */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Disciplines van het paard</label>
+                <div className="flex flex-wrap gap-2">
+                  {['dressuur','springen','eventing','western','buitenritten','mennen','voltige','endurance','working_equitation','trec'].map(d => {
+                    const active = preferences.desired_horse.disciplines_paard.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => {
+                          const has = active;
+                          const next = has ? preferences.desired_horse.disciplines_paard.filter(x => x !== d) : [...preferences.desired_horse.disciplines_paard, d];
+                          setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, disciplines_paard: next }});
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{d.replace('_',' ')}</button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Karakter/handling */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Handgevoeligheid</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['zachte_hand','neutraal','sterke_hand'].map(k => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, handgevoeligheid: preferences.desired_horse.handgevoeligheid === k ? '' : k } })}
+                        className={`px-3 py-2 rounded-full border text-sm ${preferences.desired_horse.handgevoeligheid === k ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{k.replace('_',' ')}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Vergevingsgezindheid</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['laag','gemiddeld','hoog'].map(k => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, vergevingsgezindheid: preferences.desired_horse.vergevingsgezindheid === k ? '' : k } })}
+                        className={`px-3 py-2 rounded-full border text-sm ${preferences.desired_horse.vergevingsgezindheid === k ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{k}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Temperament</label>
+                <div className="flex flex-wrap gap-2">
+                  {['rustig','koel_in_het_hoofd','gevoelig','heet','speels','dominant','voorwaarts'].map(t => {
+                    const active = preferences.desired_horse.temperament.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          const has = active;
+                          const next = has ? preferences.desired_horse.temperament.filter(x => x !== t) : [...preferences.desired_horse.temperament, t];
+                          setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, temperament: next }});
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{t.replace('_',' ')}</button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Vachtkleur */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Vachtkleuren</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {['vos','zwart','bruin','donkerbruin','schimmel','bont','valk','palomino','roan','appaloosa'].map(k => {
+                    const active = preferences.desired_horse.vachtkleuren.includes(k);
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => {
+                          const has = active;
+                          const next = has ? preferences.desired_horse.vachtkleuren.filter(x => x !== k) : [...preferences.desired_horse.vachtkleuren, k];
+                          setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, vachtkleuren: next }});
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      >{k}</button>
+                    );
+                  })}
+                  {/* Niet belangrijk als pill-knop */}
+                  <button
+                    type="button"
+                    onClick={() => setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, niet_belangrijk_vachtkleur: !preferences.desired_horse.niet_belangrijk_vachtkleur } })}
+                    className={`px-3 py-2 rounded-full border text-sm ${preferences.desired_horse.niet_belangrijk_vachtkleur ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                  >Niet belangrijk</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Doelen */}
+          {currentStep === 5 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">5</span>
                 Doelen
               </h2>
 
@@ -1344,11 +1625,11 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 5: Taken */}
-          {currentStep === 5 && (
+          {/* Step 6: Taken */}
+          {currentStep === 6 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">5</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">6</span>
                 Taken
               </h2>
 
@@ -1389,11 +1670,11 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 7: Vaardigheden */}
-          {currentStep === 7 && (
+          {/* Step 8: Vaardigheden */}
+          {currentStep === 8 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">7</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">8</span>
                 Vaardigheden
               </h2>
 
@@ -1466,11 +1747,11 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 8: Voorkeuren */}
-          {currentStep === 8 && (
+          {/* Step 9: Voorkeuren */}
+          {currentStep === 9 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">8</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">9</span>
                 Voorkeuren
               </h2>
 
@@ -1601,11 +1882,11 @@ const RiderOnboarding = () => {
             </div>
           )}
 
-          {/* Step 9: Media & Voltooien */}
-          {currentStep === 9 && (
+          {/* Step 10: Media & Voltooien */}
+          {currentStep === 10 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">9</span>
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">10</span>
                 Media & Voltooien
               </h2>
 

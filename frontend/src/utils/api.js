@@ -151,6 +151,10 @@ export function transformProfileDataForAPI(profileData) {
   add('city', basicInfo.city);
   add('max_travel_distance_km', basicInfo.max_travel_distance_km);
   add('transport_options', Array.isArray(basicInfo.transport_options) ? basicInfo.transport_options : []);
+  // Lichaamskenmerken & bio
+  if (basicInfo.rider_height_cm !== '' && basicInfo.rider_height_cm != null) add('rider_height_cm', basicInfo.rider_height_cm);
+  if (basicInfo.rider_weight_kg !== '' && basicInfo.rider_weight_kg != null) add('rider_weight_kg', basicInfo.rider_weight_kg);
+  if (typeof basicInfo.rider_bio === 'string') add('rider_bio', basicInfo.rider_bio);
   // Minderjarigen begeleiding
   add('parent_consent', basicInfo.parent_consent, { allowFalse: true });
   if (basicInfo.parent_contact_name || basicInfo.parent_contact_email) {
@@ -252,6 +256,16 @@ export function transformProfileDataForAPI(profileData) {
   add('health_restrictions', preferences.health_restrictions);
   // insurance_coverage: false is betekenisvol, dus allowFalse: true
   add('insurance_coverage', preferences.insurance_coverage, { allowFalse: true });
+  // Gewenste paard-kenmerken
+  if (preferences.desired_horse && typeof preferences.desired_horse === 'object') {
+    const dh = preferences.desired_horse;
+    const clean = { ...dh };
+    // normaliseer lege strings naar null voor numerieke velden
+    ['schofthoogte_cm_min','schofthoogte_cm_max','leeftijd_min','leeftijd_max'].forEach(k => {
+      if (clean[k] === '') clean[k] = null;
+    });
+    add('desired_horse', clean);
+  }
   add('no_gos', Array.isArray(preferences.no_gos) ? preferences.no_gos : []);
   // Rijstijl & uitrusting
   add('riding_styles', Array.isArray(preferences.riding_styles) ? preferences.riding_styles : []);
@@ -290,6 +304,9 @@ export function transformProfileDataFromAPI(apiData) {
       city: apiData.city || '',
       max_travel_distance_km: apiData.max_travel_distance_km || apiData.max_travel_distance || 25,
       transport_options: Array.isArray(apiData.transport_options) ? apiData.transport_options : [],
+      rider_height_cm: (typeof apiData.rider_height_cm === 'number') ? apiData.rider_height_cm : (apiData.rider_height_cm || ''),
+      rider_weight_kg: (typeof apiData.rider_weight_kg === 'number') ? apiData.rider_weight_kg : (apiData.rider_weight_kg || ''),
+      rider_bio: apiData.rider_bio || '',
       parent_consent: (apiData.parent_consent === true || apiData.parent_consent === false) ? apiData.parent_consent : null,
       ...(() => {
         const raw = apiData.parent_contact || '';
@@ -395,8 +412,28 @@ export function transformProfileDataFromAPI(apiData) {
         own_helmet: true,
       },
       health_restrictions: parseJSONArray(apiData.health_restrictions) || parseJSONArray(apiData.health_limitations),
-      insurance_coverage: apiData.has_insurance || false,
+      insurance_coverage: !!apiData.insurance_coverage,
       no_gos: parseJSONArray(apiData.no_gos),
+      desired_horse: (() => {
+        const dh = apiData.desired_horse || {};
+        return {
+          type: Array.isArray(dh.type) ? dh.type : [],
+          schofthoogte_cm_min: (typeof dh.schofthoogte_cm_min === 'number') ? dh.schofthoogte_cm_min : '',
+          schofthoogte_cm_max: (typeof dh.schofthoogte_cm_max === 'number') ? dh.schofthoogte_cm_max : '',
+          geslacht: Array.isArray(dh.geslacht) ? dh.geslacht : [],
+          leeftijd_min: (typeof dh.leeftijd_min === 'number') ? dh.leeftijd_min : '',
+          leeftijd_max: (typeof dh.leeftijd_max === 'number') ? dh.leeftijd_max : '',
+          ras: dh.ras || '',
+          stamboek: dh.stamboek || '',
+          disciplines_paard: Array.isArray(dh.disciplines_paard) ? dh.disciplines_paard : [],
+          handgevoeligheid: dh.handgevoeligheid || '',
+          temperament: Array.isArray(dh.temperament) ? dh.temperament : [],
+          vergevingsgezindheid: dh.vergevingsgezindheid || '',
+          ervaring_rijder_nodig: dh.ervaring_rijder_nodig || '',
+          vachtkleuren: Array.isArray(dh.vachtkleuren) ? dh.vachtkleuren : [],
+          niet_belangrijk_vachtkleur: !!dh.niet_belangrijk_vachtkleur,
+        };
+      })(),
       riding_styles: parseJSONArray(apiData.riding_styles)
     },
     media: {
