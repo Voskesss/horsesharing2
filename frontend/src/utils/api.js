@@ -186,17 +186,52 @@ export function transformProfileDataForAPI(profileData) {
   // Vaardigheden
   add('general_skills', Array.isArray(skills.general_skills) ? skills.general_skills : []);
 
-  // Lease voorkeuren
+  // Lease voorkeuren (alles onder lease_preferences)
   const leasePrefs = {};
   if (lease && typeof lease === 'object') {
     if (lease.wants_lease) leasePrefs.wants_lease = true;
     if (typeof lease.budget_max_pm_lease === 'number' && !Number.isNaN(lease.budget_max_pm_lease)) {
       leasePrefs.budget_max_pm_lease = lease.budget_max_pm_lease;
     }
+    // multi-selects of null
+    if (Array.isArray(lease.location_preference) && lease.location_preference.length) {
+      leasePrefs.location_preference = lease.location_preference;
+    } else if (lease.location_preference === null) {
+      leasePrefs.location_preference = null;
+    }
+    if (Array.isArray(lease.scope_preference) && lease.scope_preference.length) {
+      leasePrefs.scope_preference = lease.scope_preference;
+    } else if (lease.scope_preference === null) {
+      leasePrefs.scope_preference = null;
+    }
+    // duration
+    if (lease.duration && typeof lease.duration === 'object') {
+      const d = {
+        type: lease.duration.type ?? null,
+        months: typeof lease.duration.months === 'number' && !Number.isNaN(lease.duration.months)
+          ? lease.duration.months
+          : (lease.duration.months === null ? null : undefined)
+      };
+      // only add if any key defined (including null to indicate 'any')
+      if (d.type !== undefined || d.months !== undefined) {
+        leasePrefs.duration = d;
+      }
+    }
+    // booleans of null
+    if (lease.eigen_stalplek_beschikbaar === true || lease.eigen_stalplek_beschikbaar === false || lease.eigen_stalplek_beschikbaar === null) {
+      leasePrefs.eigen_stalplek_beschikbaar = lease.eigen_stalplek_beschikbaar;
+    }
+    if (lease.kan_transporteren === true || lease.kan_transporteren === false || lease.kan_transporteren === null) {
+      leasePrefs.kan_transporteren = lease.kan_transporteren;
+    }
+    // inclusies verplicht
+    if (Array.isArray(lease.required_inclusions) && lease.required_inclusions.length) {
+      leasePrefs.required_inclusions = lease.required_inclusions;
+    } else if (lease.required_inclusions === null) {
+      leasePrefs.required_inclusions = null;
+    }
   }
-  if (Object.keys(leasePrefs).length > 0) {
-    add('lease_preferences', leasePrefs);
-  }
+  if (Object.keys(leasePrefs).length > 0) add('lease_preferences', leasePrefs);
 
   // Taken
   add('willing_tasks', Array.isArray(tasks.willing_tasks) ? tasks.willing_tasks : []);
@@ -304,12 +339,23 @@ export function transformProfileDataFromAPI(apiData) {
     skills: {
       general_skills: parseJSONArray(apiData.general_skills)
     },
-    lease: {
-      wants_lease: !!(apiData.lease_preferences && apiData.lease_preferences.wants_lease),
-      budget_max_pm_lease: apiData.lease_preferences && typeof apiData.lease_preferences.budget_max_pm_lease === 'number'
-        ? apiData.lease_preferences.budget_max_pm_lease
-        : undefined,
-    },
+    lease: (() => {
+      const lp = apiData.lease_preferences || {};
+      const out = {
+        wants_lease: !!lp.wants_lease,
+        budget_max_pm_lease: typeof lp.budget_max_pm_lease === 'number' ? lp.budget_max_pm_lease : undefined,
+        location_preference: Array.isArray(lp.location_preference) ? lp.location_preference : null,
+        scope_preference: Array.isArray(lp.scope_preference) ? lp.scope_preference : null,
+        duration: {
+          type: (lp.duration && (lp.duration.type === 'doorlopend' || lp.duration.type === 'vaste_periode')) ? lp.duration.type : null,
+          months: lp.duration && typeof lp.duration.months === 'number' ? lp.duration.months : null,
+        },
+        eigen_stalplek_beschikbaar: [true,false,null].includes(lp.eigen_stalplek_beschikbaar) ? lp.eigen_stalplek_beschikbaar : null,
+        kan_transporteren: [true,false,null].includes(lp.kan_transporteren) ? lp.kan_transporteren : null,
+        required_inclusions: Array.isArray(lp.required_inclusions) ? lp.required_inclusions : null,
+      };
+      return out;
+    })(),
     tasks: {
       willing_tasks: parseJSONArray(apiData.willing_tasks),
       task_frequency: apiData.task_frequency || ''

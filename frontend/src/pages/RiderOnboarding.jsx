@@ -78,6 +78,12 @@ const RiderOnboarding = () => {
   const [lease, setLease] = useState({
     wants_lease: false,
     budget_max_pm_lease: undefined,
+    location_preference: null, // ['on_site','off_site'] of null (=maakt niet uit)
+    scope_preference: null, // ['full','part'] of null (=maakt niet uit)
+    duration: { type: null, months: null }, // type: 'doorlopend' | 'vaste_periode' | null
+    eigen_stalplek_beschikbaar: null, // true/false/null
+    kan_transporteren: null, // true/false/null
+    required_inclusions: null, // array of null
   });
 
   // Taken
@@ -878,8 +884,8 @@ const RiderOnboarding = () => {
                   })}
                 </div>
 
-                {/* Subactiviteiten */}
-                <div className="text-xs text-gray-500 mb-1">Subactiviteiten</div>
+                {/* Subactiviteiten verzorgen */}
+                <div className="text-xs text-gray-500 mb-1">Subactiviteiten verzorgen</div>
 
                 {/* Activiteiten onder de modus, afhankelijk van keuze */}
                 {(() => {
@@ -891,14 +897,9 @@ const RiderOnboarding = () => {
                     { key: 'pasture_turnout', label: 'Weidegang/uitzetten' },
                     { key: 'medical_assist', label: 'Medische verzorging assisteren' },
                   ];
-                  const rideActivities = [
-                    { key: 'buitenritten', label: 'Buitenritten' },
-                    { key: 'dressuur_training', label: 'Dressuurmatig trainen' },
-                    { key: 'springen_training', label: 'Springen trainen' },
-                  ];
                   let shown = [];
                   if (experience.activity_mode === 'care_only') shown = careActivities;
-                  if (experience.activity_mode === 'ride_or_care') shown = [...careActivities, ...rideActivities];
+                  if (experience.activity_mode === 'ride_or_care') shown = careActivities; // geen rij-subactiviteiten meer tonen
                   if (experience.activity_mode === 'ride_only') shown = [];
                   if (experience.activity_mode === 'drive_only') shown = [];
                   if (shown.length === 0) return null;
@@ -940,6 +941,225 @@ const RiderOnboarding = () => {
                       <option value="gevorderd">Gevorderd</option>
                       <option value="ervaren">Ervaren</option>
                     </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Lease - prominente sectie */}
+              <div className="mt-6 p-4 rounded-xl border shadow-sm bg-gradient-to-r from-emerald-50 to-blue-50 border-emerald-200">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-base font-semibold text-emerald-800">Lease</label>
+                  <span className="text-xs font-semibold text-white bg-emerald-500 px-2 py-0.5 rounded-full">Nieuw</span>
+                </div>
+                <p className="text-sm text-emerald-900/80 mb-3">Optioneel: sta open voor lease naast bijrijden/verzorgen. Je wordt dan óók gematcht op lease‑aanbiedingen.</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setLease({ ...lease, wants_lease: !lease.wants_lease })}
+                    className={`px-4 py-2 rounded-full border text-sm transition-colors ${lease.wants_lease ? 'bg-emerald-600 border-emerald-600 text-white shadow' : 'bg-white border-gray-300 text-gray-700'}`}
+                  >
+                    {lease.wants_lease ? 'Lease gewenst' : 'Lease niet geselecteerd'}
+                  </button>
+                </div>
+                {lease.wants_lease && (
+                  <div className="grid grid-cols-1 gap-6">
+                    {/* Type (opgesplitst in Locatie en Omvang) */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Locatie</label>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <button
+                          type="button"
+                          onClick={() => setLease({ ...lease, location_preference: null })}
+                          className={`px-3 py-2 rounded-full border text-sm ${lease.location_preference === null ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700'}`}
+                        >In overleg</button>
+                        {[
+                          {key: 'Bij eigenaar op stal', val: 'on_site'},
+                          {key: 'Op eigen stal', val: 'off_site'},
+                        ].map(item => {
+                          const selected = Array.isArray(lease.location_preference) && lease.location_preference.includes(item.val);
+                          return (
+                            <button
+                              key={item.val}
+                              type="button"
+                              onClick={() => {
+                                if (!Array.isArray(lease.location_preference)) {
+                                  setLease({ ...lease, location_preference: [item.val] });
+                                  return;
+                                }
+                                const has = lease.location_preference.includes(item.val);
+                                const next = has ? lease.location_preference.filter(k => k !== item.val) : [...lease.location_preference, item.val];
+                                setLease({ ...lease, location_preference: next.length ? next : null });
+                              }}
+                              className={`px-3 py-2 rounded-full border text-sm ${selected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                            >{item.key}</button>
+                          );
+                        })}
+                      </div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Omvang</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setLease({ ...lease, scope_preference: null })}
+                          className={`px-3 py-2 rounded-full border text-sm ${lease.scope_preference === null ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700'}`}
+                        >In overleg</button>
+                        {[
+                          {key: 'Full lease', val: 'full'},
+                          {key: 'Part lease', val: 'part'},
+                        ].map(item => {
+                          const selected = Array.isArray(lease.scope_preference) && lease.scope_preference.includes(item.val);
+                          return (
+                            <button
+                              key={item.val}
+                              type="button"
+                              onClick={() => {
+                                if (!Array.isArray(lease.scope_preference)) {
+                                  setLease({ ...lease, scope_preference: [item.val] });
+                                  return;
+                                }
+                                const has = lease.scope_preference.includes(item.val);
+                                const next = has ? lease.scope_preference.filter(k => k !== item.val) : [...lease.scope_preference, item.val];
+                                setLease({ ...lease, scope_preference: next.length ? next : null });
+                              }}
+                              className={`px-3 py-2 rounded-full border text-sm ${selected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                            >{item.key}</button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Duur */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Duur</label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            {key: 'doorlopend', label: 'Doorlopend'},
+                            {key: 'vaste_periode', label: 'Vaste periode'},
+                          ].map(opt => (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              onClick={() => setLease({ ...lease, duration: { type: opt.key, months: opt.key === 'vaste_periode' ? (lease.duration?.months || 6) : null } })}
+                              className={`px-3 py-2 rounded-full border text-sm ${lease.duration?.type === opt.key ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                            >{opt.label}</button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setLease({ ...lease, duration: { type: null, months: null } })}
+                            className={`px-3 py-2 rounded-full border text-sm ${!lease.duration?.type ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700'}`}
+                          >In overleg</button>
+                        </div>
+                      </div>
+                      {lease.duration?.type === 'vaste_periode' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Aantal maanden</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={lease.duration?.months ?? ''}
+                            onChange={(e) => setLease({ ...lease, duration: { type: 'vaste_periode', months: e.target.value === '' ? null : parseInt(e.target.value) } })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Locatie & transport */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Eigen stalplek beschikbaar?</label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setLease({ ...lease, eigen_stalplek_beschikbaar: null })}
+                            className={`px-3 py-2 rounded-full border text-sm ${lease.eigen_stalplek_beschikbaar === null ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700'}`}
+                          >In overleg</button>
+                          {[
+                            {key: true, label: 'Ja'},
+                            {key: false, label: 'Nee'},
+                          ].map(opt => (
+                            <button
+                              key={String(opt.key)}
+                              type="button"
+                              onClick={() => setLease({ ...lease, eigen_stalplek_beschikbaar: opt.key })}
+                              className={`px-3 py-2 rounded-full border text-sm ${lease.eigen_stalplek_beschikbaar === opt.key ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                            >{opt.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Kan je transporteren?</label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setLease({ ...lease, kan_transporteren: null })}
+                            className={`px-3 py-2 rounded-full border text-sm ${lease.kan_transporteren === null ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700'}`}
+                          >In overleg</button>
+                          {[
+                            {key: true, label: 'Ja'},
+                            {key: false, label: 'Nee'},
+                          ].map(opt => (
+                            <button
+                              key={String(opt.key)}
+                              type="button"
+                              onClick={() => setLease({ ...lease, kan_transporteren: opt.key })}
+                              className={`px-3 py-2 rounded-full border text-sm ${lease.kan_transporteren === opt.key ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                            >{opt.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Lease budget (max €/maand)</label>
+                        <input
+                          type="number"
+                          value={lease.budget_max_pm_lease ?? ''}
+                          onChange={(e) => setLease({ ...lease, budget_max_pm_lease: e.target.value === '' ? undefined : parseInt(e.target.value) })}
+                          placeholder="bijv. 200"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        />
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setLease({ ...lease, budget_max_pm_lease: undefined })}
+                            className={`px-3 py-2 rounded-full border text-xs ${lease.budget_max_pm_lease === undefined ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700'}`}
+                          >In overleg</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Verplicht inbegrepen */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Wat moet inbegrepen zijn in de leaseprijs?</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => setLease({ ...lease, required_inclusions: null })}
+                          className={`px-3 py-2 rounded-full border text-sm ${lease.required_inclusions === null ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700'}`}
+                        >In overleg</button>
+                        {[
+                          'voer','stalplaats','zadel_en_toebehoren','les_optie','hoefsmid_inbegrepen','dierenarts_inbegrepen'
+                        ].map(key => {
+                          const selected = Array.isArray(lease.required_inclusions) && lease.required_inclusions.includes(key);
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                if (!Array.isArray(lease.required_inclusions)) {
+                                  setLease({ ...lease, required_inclusions: [key] });
+                                  return;
+                                }
+                                const has = lease.required_inclusions.includes(key);
+                                const next = has ? lease.required_inclusions.filter(k => k !== key) : [...lease.required_inclusions, key];
+                                setLease({ ...lease, required_inclusions: next.length ? next : null });
+                              }}
+                              className={`px-3 py-2 rounded-full border text-sm ${selected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                            >{key.replace(/_/g,' ')}</button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                   </div>
                 )}
               </div>
@@ -1011,33 +1231,7 @@ const RiderOnboarding = () => {
 
               
 
-              {/* Lease voorkeuren */}
-              <div className="pt-2 border-t border-gray-100">
-                <label className="block text-sm font-semibold text-gray-900 mb-3">Lease</label>
-                <div className="flex items-center gap-3 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setLease({ ...lease, wants_lease: !lease.wants_lease })}
-                    className={`px-4 py-2 rounded-full border text-sm ${lease.wants_lease ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
-                  >
-                    {lease.wants_lease ? 'Lease gewenst' : 'Lease niet geselecteerd'}
-                  </button>
-                </div>
-                {lease.wants_lease && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Lease budget (max €/maand)</label>
-                      <input
-                        type="number"
-                        value={lease.budget_max_pm_lease ?? ''}
-                        onChange={(e) => setLease({ ...lease, budget_max_pm_lease: e.target.value === '' ? undefined : parseInt(e.target.value) })}
-                        placeholder="bijv. 200"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              
             </div>
           )}
 
