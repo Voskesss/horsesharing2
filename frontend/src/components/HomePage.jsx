@@ -1,16 +1,36 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { createAPI } from '../utils/api';
 
 const HomePage = () => {
-  const { login, isAuthenticated } = useKindeAuth();
+  const { login, isAuthenticated, getToken } = useKindeAuth();
+  const [roleIndex, setRoleIndex] = useState(0);
+  const roles = ['bijrijder', 'leaser', 'verzorger'];
   const navigate = useNavigate();
+  const [me, setMe] = useState(null);
+
+  // Laad optioneel user info, maar niet automatisch redirecten
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        if (!isAuthenticated) return;
+        const api = createAPI(getToken);
+        const data = await api.user.getMe();
+        if (mounted) setMe(data);
+      } catch {}
+    };
+    load();
+    return () => { mounted = false; };
+  }, [isAuthenticated, getToken]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/profile-choice');
-    }
-  }, [isAuthenticated, navigate]);
+    const t = setInterval(() => {
+      setRoleIndex((i) => (i + 1) % roles.length);
+    }, 2500);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -19,16 +39,21 @@ const HomePage = () => {
         <div className="absolute inset-0 bg-white/70"></div>
         <div className="relative max-w-7xl mx-auto px-4 py-20 sm:py-32">
           <div className="text-center">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-6 leading-tight">
-              Verbind Paarden
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">HorseSharing</span>
               <br />
-              <span className="text-gray-800">met Ruiters</span>
+              <span className="text-gray-800">e‑Matching tussen paard en </span>
+              <span className="inline-block min-w-[10ch]">
+                <span className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent animate-pulse">
+                  {roles[roleIndex]}
+                </span>
+              </span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-700 mb-12 max-w-3xl mx-auto leading-relaxed">
               Het eerste centrale platform voor bijrijders en paardeneigenaren. 
               <span className="font-semibold text-emerald-600"> Betere matching, meer bereik, minder moeite.</span>
             </p>
-            {!isAuthenticated && (
+            {!isAuthenticated ? (
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <button
                   onClick={login}
@@ -44,6 +69,28 @@ const HomePage = () => {
                 <p className="text-sm text-gray-600">
                   ✨ Gratis tot je eerste succesvolle match
                 </p>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link
+                  to="/profile-choice"
+                  className="group bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                >
+                  <span className="flex items-center">
+                    Ga verder met onboarding
+                    <svg className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </span>
+                </Link>
+                {me?.has_rider_profile && (
+                  <Link
+                    to="/rider-profile"
+                    className="text-emerald-700 hover:text-emerald-800 font-semibold"
+                  >
+                    Naar mijn profiel →
+                  </Link>
+                )}
               </div>
             )}
           </div>
