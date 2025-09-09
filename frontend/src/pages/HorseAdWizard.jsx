@@ -30,7 +30,7 @@ export default function HorseAdWizard() {
   const [basic, setBasic] = useState({
     title: '',
     description: '',
-    ad_type: 'bijrijden', // bijrijden | verzorgen | lease
+    ad_types: ['bijrijden'], // multi-select
     name: '',
     type: 'horse', // horse | pony
     gender: '',
@@ -40,6 +40,8 @@ export default function HorseAdWizard() {
     photos: [],
     video_intro_url: '',
   });
+  const [localFiles, setLocalFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   // Stap 2: Beschikbaarheid
   const [availability, setAvailability] = useState({
@@ -91,7 +93,10 @@ export default function HorseAdWizard() {
     const payload = {};
     if (basic.title) payload.title = basic.title;
     if (basic.description) payload.description = basic.description;
-    if (basic.ad_type) payload.ad_type = basic.ad_type;
+    if (Array.isArray(basic.ad_types)) {
+      payload.ad_types = basic.ad_types;
+      if (basic.ad_types.length) payload.ad_type = basic.ad_types[0]; // compat
+    }
     if (basic.name) payload.name = basic.name;
     if (basic.type) payload.type = basic.type;
     if (basic.gender) payload.gender = basic.gender;
@@ -176,12 +181,19 @@ export default function HorseAdWizard() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Advertentietype</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Advertentietype (meerdere mogelijk)</label>
                 <div className="flex gap-3 flex-wrap">
-                  {['bijrijden','verzorgen','lease'].map(t => (
-                    <button key={t} type="button" onClick={()=>setBasic({...basic, ad_type: t})}
-                      className={`px-4 py-2 rounded-full border ${basic.ad_type===t ? 'bg-emerald-100 border-emerald-500 text-emerald-700':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
-                  ))}
+                  {['bijrijden','verzorgen','lease'].map(t => {
+                    const selected = basic.ad_types.includes(t);
+                    return (
+                      <button key={t} type="button" onClick={()=>{
+                        const has = basic.ad_types.includes(t);
+                        const next = has ? basic.ad_types.filter(x=>x!==t) : [...basic.ad_types, t];
+                        setBasic({...basic, ad_types: next});
+                      }}
+                        className={`px-4 py-2 rounded-full border ${selected ? 'bg-emerald-100 border-emerald-500 text-emerald-700':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -225,12 +237,32 @@ export default function HorseAdWizard() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Foto URL's (komma-gescheiden, max 5)</label>
-                  <input type="text" value={basic.photos.join(',')} onChange={(e)=>{
-                    const val = e.target.value.trim();
-                    const arr = val ? val.split(',').map(s=>s.trim()).slice(0,5) : [];
-                    setBasic({...basic, photos: arr});
-                  }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Foto's (max 5)</label>
+                  <input type="file" accept="image/*" multiple onChange={(e)=>setLocalFiles(Array.from(e.target.files || []).slice(0,5))} />
+                  <div className="mt-2 flex gap-2 flex-wrap">
+                    {localFiles.map((f, idx) => (
+                      <img key={idx} src={URL.createObjectURL(f)} alt="preview" className="w-20 h-20 object-cover rounded border" />
+                    ))}
+                    {basic.photos.map((url, idx) => (
+                      <div key={`p-${idx}`} className="relative">
+                        <img src={url} alt="uploaded" className="w-20 h-20 object-cover rounded border" />
+                        <button type="button" onClick={()=>setBasic({...basic, photos: basic.photos.filter((_,i)=>i!==idx)})} className="absolute -top-2 -right-2 bg-white border rounded-full px-2 text-sm">×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" disabled={uploading || localFiles.length===0} onClick={async ()=>{
+                    try {
+                      setUploading(true);
+                      const res = await api.media.uploadPhotos(localFiles);
+                      const urls = Array.isArray(res.urls) ? res.urls.slice(0,5-basic.photos.length) : [];
+                      setBasic({...basic, photos: [...basic.photos, ...urls]});
+                      setLocalFiles([]);
+                    } catch (e) {
+                      alert(`Upload mislukt: ${e.message}`);
+                    } finally {
+                      setUploading(false);
+                    }
+                  }} className={`mt-2 px-3 py-2 rounded ${uploading ? 'bg-gray-300' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>{uploading ? 'Uploaden...' : 'Uploaden'}</button>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Video URL</label>

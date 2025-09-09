@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
+from fastapi.staticfiles import StaticFiles
 import json
 import os
 import requests
@@ -12,6 +13,11 @@ from auth import get_current_user, get_optional_user
 import uvicorn
 
 app = FastAPI(title="HorseSharing API", version="1.0.0")
+
+# Ensure uploads directory exists and mount static files
+UPLOAD_ROOT = os.path.join(os.path.dirname(__file__), 'uploads')
+os.makedirs(UPLOAD_ROOT, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 
 # CORS middleware voor frontend communicatie
 app.add_middleware(
@@ -199,6 +205,7 @@ class HorsePayload(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     ad_type: Optional[str] = None           # bijrijden/verzorgen/lease
+    ad_types: Optional[list] = None         # multi-select
     name: Optional[str] = None
     type: Optional[str] = None           # pony/horse
     height: Optional[int] = None         # cm
@@ -418,6 +425,7 @@ async def list_owner_horses(
                 "id": h.id,
                 "title": h.title,
                 "ad_type": h.ad_type,
+                "ad_types": h.ad_types or [],
                 "name": h.name,
                 "type": h.type,
                 "height": h.height,
@@ -437,6 +445,29 @@ async def list_owner_horses(
             } for h in horses
         ]
     }
+
+@app.post("/media/upload")
+async def upload_media(
+    request: Request,
+    files: List[UploadFile] = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    urls: List[str] = []
+    saved_files: List[str] = []
+    for f in files:
+        # Only allow images
+        filename = f.filename or "upload"
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+            continue
+        unique = f"{uuid.uuid4().hex}{ext}"
+        dest_path = os.path.join(UPLOAD_ROOT, unique)
+        with open(dest_path, "wb") as out:
+            out.write(await f.read())
+        saved_files.append(unique)
+    base = str(request.base_url).rstrip('/')
+    urls = [f"{base}/uploads/{name}" for name in saved_files]
+    return {"urls": urls}
 
 @app.post("/owner/horses")
 async def create_or_update_horse(
@@ -467,6 +498,8 @@ async def create_or_update_horse(
         horse.description = payload.description
     if payload.ad_type is not None:
         horse.ad_type = payload.ad_type
+    if payload.ad_types is not None:
+        horse.ad_types = payload.ad_types
     if payload.name is not None:
         horse.name = payload.name
     if payload.type is not None:

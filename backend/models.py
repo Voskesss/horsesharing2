@@ -186,6 +186,7 @@ class HorseProfile(Base):
     title = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     ad_type = Column(String(20), nullable=True)  # bijrijden/verzorgen/lease
+    ad_types = Column(JSON, nullable=True)  # multi-select: ["bijrijden","lease",...]
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)  # pony/horse
     height = Column(Integer, nullable=True)  # cm shoulder height
