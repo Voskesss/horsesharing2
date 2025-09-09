@@ -236,6 +236,7 @@ async def create_or_update_rider_profile(
             available_days=availability_dict,
             session_duration_min=data.get('session_duration_min'),
             session_duration_max=data.get('session_duration_max'),
+            min_days_per_week=data.get('min_days_per_week'),
             budget_min=data.get('budget_min_euro'),
             budget_max=data.get('budget_max_euro'),
             years_experience=data.get('experience_years'),
@@ -243,6 +244,7 @@ async def create_or_update_rider_profile(
             discipline_preferences=data.get('discipline_preferences', []) or [],
             riding_styles=data.get('riding_styles', []) or [],
             general_skills=data.get('general_skills', []) or [],
+            lease_preferences=data.get('lease_preferences') or None,
             personality_style=data.get('personality_style', []) or [],
             activity_mode=data.get('activity_mode'),
             activity_preferences=data.get('activity_preferences', []) or [],
@@ -550,6 +552,7 @@ async def create_or_update_rider_profile(
             'transport_options': 'transport_options',
             'session_duration_min': 'session_duration_min',
             'session_duration_max': 'session_duration_max',
+            'min_days_per_week': 'min_days_per_week',
             'start_date': 'start_date',
             'arrangement_duration': 'duration_preference',
             'budget_min_euro': 'budget_min',
@@ -570,7 +573,7 @@ async def create_or_update_rider_profile(
             if src in payload:
                 val = payload.get(src)
                 # type conversies
-                if dest in ('max_travel_distance', 'session_duration_min', 'session_duration_max', 'budget_min', 'budget_max', 'years_experience'):
+                if dest in ('max_travel_distance', 'session_duration_min', 'session_duration_max', 'min_days_per_week', 'budget_min', 'budget_max', 'years_experience'):
                     try:
                         val = int(val) if val is not None else None
                     except Exception:
@@ -580,6 +583,10 @@ async def create_or_update_rider_profile(
                 if dest in ('health_limitations', 'no_gos') and isinstance(val, list):
                     val = json.dumps(val)
                 setattr(existing_profile, dest, val)
+
+        # 1b) Lease preferences (JSON dict)
+        if 'lease_preferences' in payload and isinstance(payload.get('lease_preferences'), dict):
+            existing_profile.lease_preferences = payload.get('lease_preferences')
 
         # 2) Availability
         if 'available_schedule' in payload and isinstance(payload.get('available_schedule'), dict):
@@ -755,6 +762,7 @@ async def get_rider_profile(
             "trail_rides": bool(getattr(profile, 'comfortable_with_trail_rides', False)),
             "jumping_height": profile.max_jump_height or 0
         },
+        "min_days_per_week": profile.min_days_per_week,
         "riding_goals": profile.goals if profile.goals else [],
         "discipline_preferences": profile.discipline_preferences if profile.discipline_preferences else [],
         "general_skills": profile.general_skills or [],
@@ -765,6 +773,7 @@ async def get_rider_profile(
         "personality_style": profile.personality_style if profile.personality_style else [],
         "willing_tasks": profile.willing_tasks if profile.willing_tasks else [],
         "task_frequency": profile.task_frequency,
+        "lease_preferences": profile.lease_preferences or {},
         "material_preferences": {
             "bitless_ok": profile.bitless_ok,
             "spurs": bool(getattr(profile, 'spurs_ok', False)),

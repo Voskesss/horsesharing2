@@ -45,6 +45,7 @@ class RiderProfile(Base):
     session_duration_max = Column(Integer, nullable=True)
     start_date = Column(DateTime, nullable=True)
     duration_preference = Column(String(50), nullable=True)  # temporary/ongoing
+    min_days_per_week = Column(Integer, nullable=True)
     
     # Budget
     budget_min = Column(Integer, nullable=True)  # euros per month
@@ -74,6 +75,8 @@ class RiderProfile(Base):
     riding_styles = Column(JSON, nullable=True)  # ["bitloos", "hackamore", "western", ...]
     # Skills
     general_skills = Column(JSON, nullable=True)  # ["grondwerk","longeren_basis",...]
+    # Lease preferences (JSON blob, e.g. {"budget_max_pm_lease": 200, ...})
+    lease_preferences = Column(JSON, nullable=True)
     # Activities
     activity_mode = Column(String(20), nullable=True)  # care_only | ride_or_care | ride_only
     activity_preferences = Column(JSON, nullable=True)  # ["verzorging","grondwerk","longeren","rijden","mennen"]

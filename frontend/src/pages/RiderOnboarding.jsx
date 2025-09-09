@@ -34,7 +34,8 @@ const RiderOnboarding = () => {
     session_duration_min: 60,
     session_duration_max: 120,
     start_date: '',
-    arrangement_duration: 'ongoing'
+    arrangement_duration: 'ongoing',
+    min_days_per_week: 1
   });
 
   // Budget
@@ -71,6 +72,12 @@ const RiderOnboarding = () => {
   // Vaardigheden
   const [skills, setSkills] = useState({
     general_skills: []
+  });
+
+  // Lease voorkeuren
+  const [lease, setLease] = useState({
+    wants_lease: false,
+    budget_max_pm_lease: undefined,
   });
 
   // Taken
@@ -135,6 +142,7 @@ const RiderOnboarding = () => {
     experience,
     goals,
     skills,
+    lease,
     tasks,
     preferences,
     media
@@ -184,6 +192,7 @@ const RiderOnboarding = () => {
         setGoals(transformedData.goals);
         setSkills(transformedData.skills || { general_skills: [] });
         setTasks(transformedData.tasks);
+        setLease(transformedData.lease || { wants_lease: false, budget_max_pm_lease: undefined });
         setPreferences(transformedData.preferences);
         setMedia(transformedData.media);
         
@@ -464,6 +473,24 @@ const RiderOnboarding = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Min. dagen per week (algemeen) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Minimale dagen per week (algemeen)</label>
+                <div className="flex flex-wrap gap-2">
+                  {[1,2,3,4,5,6,7].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setAvailability({ ...availability, min_days_per_week: n })}
+                      className={`px-3 py-2 rounded-full border text-sm ${availability.min_days_per_week === n ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                    >
+                      {n} dag{n>1?'en':''}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Geldt voor rijden, verzorgen én lease.</p>
               </div>
             </div>
           )}
@@ -977,6 +1004,36 @@ const RiderOnboarding = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              
+
+              {/* Lease voorkeuren */}
+              <div className="pt-2 border-t border-gray-100">
+                <label className="block text-sm font-semibold text-gray-900 mb-3">Lease</label>
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setLease({ ...lease, wants_lease: !lease.wants_lease })}
+                    className={`px-4 py-2 rounded-full border text-sm ${lease.wants_lease ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                  >
+                    {lease.wants_lease ? 'Lease gewenst' : 'Lease niet geselecteerd'}
+                  </button>
+                </div>
+                {lease.wants_lease && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Lease budget (max €/maand)</label>
+                      <input
+                        type="number"
+                        value={lease.budget_max_pm_lease ?? ''}
+                        onChange={(e) => setLease({ ...lease, budget_max_pm_lease: e.target.value === '' ? undefined : parseInt(e.target.value) })}
+                        placeholder="bijv. 200"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -117,6 +117,7 @@ export function transformProfileDataForAPI(profileData) {
     experience = {},
     goals = {},
     skills = {},
+    lease = {},
     tasks = {},
     preferences = {},
     media = {},
@@ -161,6 +162,7 @@ export function transformProfileDataForAPI(profileData) {
   add('session_duration_max', availability.session_duration_max);
   add('start_date', availability.start_date);
   add('arrangement_duration', availability.arrangement_duration);
+  add('min_days_per_week', availability.min_days_per_week);
 
   // Budget (per maand)
   add('budget_min_euro', budget.budget_min_euro);
@@ -183,6 +185,18 @@ export function transformProfileDataForAPI(profileData) {
 
   // Vaardigheden
   add('general_skills', Array.isArray(skills.general_skills) ? skills.general_skills : []);
+
+  // Lease voorkeuren
+  const leasePrefs = {};
+  if (lease && typeof lease === 'object') {
+    if (lease.wants_lease) leasePrefs.wants_lease = true;
+    if (typeof lease.budget_max_pm_lease === 'number' && !Number.isNaN(lease.budget_max_pm_lease)) {
+      leasePrefs.budget_max_pm_lease = lease.budget_max_pm_lease;
+    }
+  }
+  if (Object.keys(leasePrefs).length > 0) {
+    add('lease_preferences', leasePrefs);
+  }
 
   // Taken
   add('willing_tasks', Array.isArray(tasks.willing_tasks) ? tasks.willing_tasks : []);
@@ -246,7 +260,8 @@ export function transformProfileDataFromAPI(apiData) {
       session_duration_min: apiData.session_duration_min || 60,
       session_duration_max: apiData.session_duration_max || 120,
       start_date: apiData.start_date || '',
-      arrangement_duration: apiData.duration_preference || apiData.arrangement_duration || 'ongoing'
+      arrangement_duration: apiData.duration_preference || apiData.arrangement_duration || 'ongoing',
+      min_days_per_week: apiData.min_days_per_week || 0
     },
     budget: {
       budget_min_euro: apiData.budget_min || apiData.budget_min_euro || 150,
@@ -286,6 +301,12 @@ export function transformProfileDataFromAPI(apiData) {
     },
     skills: {
       general_skills: parseJSONArray(apiData.general_skills)
+    },
+    lease: {
+      wants_lease: !!(apiData.lease_preferences && apiData.lease_preferences.wants_lease),
+      budget_max_pm_lease: apiData.lease_preferences && typeof apiData.lease_preferences.budget_max_pm_lease === 'number'
+        ? apiData.lease_preferences.budget_max_pm_lease
+        : undefined,
     },
     tasks: {
       willing_tasks: parseJSONArray(apiData.willing_tasks),
