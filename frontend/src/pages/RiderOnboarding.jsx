@@ -154,6 +154,7 @@ const RiderOnboarding = () => {
     try {
       const api = createAPI(getToken);
       const apiData = transformProfileDataForAPI(profileData);
+      console.log('🛰️ POST /rider-profile payload min_days_per_week =', apiData.min_days_per_week);
       await api.riderProfile.createOrUpdate(apiData);
       console.log('Profile auto-saved successfully');
     } catch (error) {
@@ -179,6 +180,7 @@ const RiderOnboarding = () => {
         const apiData = await api.riderProfile.get();
         
         console.log('🔍 RAW API DATA:', JSON.stringify(apiData, null, 2));
+        console.log('📥 GET /rider-profile min_days_per_week =', apiData.min_days_per_week);
         
         const transformedData = transformProfileDataFromAPI(apiData);
         
@@ -475,9 +477,20 @@ const RiderOnboarding = () => {
                 </div>
               </div>
 
+            </div>
+          )}
+
+          {/* Step 2: Beschikbaarheid */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">2</span>
+                Beschikbaarheid
+              </h2>
+
               {/* Min. dagen per week (algemeen) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Minimale dagen per week (algemeen)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Wat is het minimale aantal dagen dat je wilt verzorgen/bijrijden of leasen?</label>
                 <div className="flex flex-wrap gap-2">
                   {[1,2,3,4,5,6,7].map(n => (
                     <button
@@ -492,18 +505,8 @@ const RiderOnboarding = () => {
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Geldt voor rijden, verzorgen én lease.</p>
               </div>
-            </div>
-          )}
 
-          {/* Step 2: Beschikbaarheid */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">2</span>
-                Beschikbaarheid
-              </h2>
-
-              {/* Nieuwe UI: per-dag dagdelen (ochtend/middag/avond) */}
+              {/* Per-dag dagdelen (ochtend/middag/avond) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Beschikbaarheid per dag</label>
                 <div className="space-y-2">

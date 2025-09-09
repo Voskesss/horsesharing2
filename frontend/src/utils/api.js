@@ -261,7 +261,9 @@ export function transformProfileDataFromAPI(apiData) {
       session_duration_max: apiData.session_duration_max || 120,
       start_date: apiData.start_date || '',
       arrangement_duration: apiData.duration_preference || apiData.arrangement_duration || 'ongoing',
-      min_days_per_week: apiData.min_days_per_week || 0
+      min_days_per_week: (apiData.min_days_per_week !== undefined && apiData.min_days_per_week !== null)
+        ? apiData.min_days_per_week
+        : 1
     },
     budget: {
       budget_min_euro: apiData.budget_min || apiData.budget_min_euro || 150,
