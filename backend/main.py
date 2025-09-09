@@ -11,6 +11,15 @@ from database import get_db
 from models import User, RiderProfile, OwnerProfile, HorseProfile
 from auth import get_current_user, get_optional_user
 import uvicorn
+import uuid
+
+# Optional Azure imports
+AZURE_AVAILABLE = False
+try:
+    from azure.storage.blob import BlobServiceClient, ContentSettings
+    AZURE_AVAILABLE = True
+except Exception:
+    AZURE_AVAILABLE = False
 
 app = FastAPI(title="HorseSharing API", version="1.0.0")
 
@@ -214,6 +223,7 @@ class HorsePayload(BaseModel):
     breed: Optional[str] = None
     disciplines: Optional[dict] = None   # simple dict or list mapping
     max_jump_height: Optional[int] = None
+    temperament: Optional[list] = None
     required_tasks: Optional[list] = None
     optional_tasks: Optional[list] = None
     task_frequency: Optional[str] = None
@@ -452,13 +462,45 @@ async def upload_media(
     files: List[UploadFile] = File(...),
     current_user: User = Depends(get_current_user),
 ):
+    """Uploads images either to Azure Blob Storage (if configured) or locally (/uploads)."""
+    allowed_ext = [".jpg", ".jpeg", ".png", ".webp"]
+    use_azure = os.getenv("AZURE_STORAGE_CONNECTION_STRING") and os.getenv("AZURE_CONTAINER") and AZURE_AVAILABLE
+
     urls: List[str] = []
+    if use_azure:
+        try:
+            conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+            container = os.getenv("AZURE_CONTAINER")
+            public_base = os.getenv("AZURE_PUBLIC_BASE_URL")  # e.g. https://<account>.blob.core.windows.net/<container>
+            bsc = BlobServiceClient.from_connection_string(conn_str)
+            container_client = bsc.get_container_client(container)
+            for f in files:
+                filename = f.filename or "upload"
+                ext = os.path.splitext(filename)[1].lower()
+                if ext not in allowed_ext:
+                    continue
+                blob_name = f"{uuid.uuid4().hex}{ext}"
+                blob_client = container_client.get_blob_client(blob_name)
+                data = await f.read()
+                content_type = "image/png" if ext == ".png" else ("image/webp" if ext == ".webp" else "image/jpeg")
+                blob_client.upload_blob(data, overwrite=True, content_settings=ContentSettings(content_type=content_type))
+                if public_base:
+                    urls.append(f"{public_base.rstrip('/')}/{blob_name}")
+                else:
+                    # Default Azure URL format
+                    account = bsc.account_name
+                    urls.append(f"https://{account}.blob.core.windows.net/{container}/{blob_name}")
+            return {"urls": urls}
+        except Exception as e:
+            # Fallback to local if Azure fails
+            print(f"Azure upload failed, falling back to local: {e}")
+
+    # Local fallback
     saved_files: List[str] = []
     for f in files:
-        # Only allow images
         filename = f.filename or "upload"
         ext = os.path.splitext(filename)[1].lower()
-        if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        if ext not in allowed_ext:
             continue
         unique = f"{uuid.uuid4().hex}{ext}"
         dest_path = os.path.join(UPLOAD_ROOT, unique)

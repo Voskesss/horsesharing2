@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
+import ImageUploader from '../components/ImageUploader';
 
 const defaultSchedule = () => ({
   maandag: [],
@@ -88,9 +89,117 @@ export default function HorseAdWizard() {
     rules: { helmet_required: true, under_18_allowed: true, contract_required: false },
   });
 
+  // Autosave (concept) — debounced
+  const saveTimerRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '' });
+  const showToast = (msg, ms = 2000) => {
+    setToast({ visible: true, message: msg });
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast({ visible: false, message: '' }), ms);
+  };
+  const doAutoSave = async (showToast = false) => {
+    // Bouw minimale payload; sla niet op als er echt niets is ingevoerd
+    const payload = {};
+    if (basic.title) payload.title = basic.title;
+    if (Array.isArray(basic.ad_types) && basic.ad_types.length) {
+      payload.ad_types = basic.ad_types;
+      payload.ad_type = basic.ad_types[0];
+    }
+    if (basic.name) payload.name = basic.name;
+    if (basic.type) payload.type = basic.type;
+    if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
+    // Beschikbaarheid minimaal meesturen als er iets is gekozen
+    if (Object.values(availability.available_days || {}).some(arr => Array.isArray(arr) && arr.length)) {
+      payload.available_days = availability.available_days;
+    }
+    // Guard: niets ingevuld -> skip
+    if (Object.keys(payload).length === 0) return;
+    try {
+      setSaving(true);
+      await api.ownerHorses.createOrUpdate(payload);
+      if (showToast) {
+        setToast({ visible: true, message: 'Concept opgeslagen' });
+        window.clearTimeout(doAutoSave._t);
+        doAutoSave._t = window.setTimeout(() => setToast({ visible: false, message: '' }), 2000);
+      }
+    } catch (e) {
+      // stilhouden in UI; concept autosave mag stil falen
+      console.warn('Autosave horse failed', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(doAutoSave, 1500);
+    return () => window.clearTimeout(saveTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [basic, availability, cost, filters, expectations]);
+
+  // Prefill from existing latest horse (draft)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.ownerHorses.list();
+        const horses = Array.isArray(res?.horses) ? res.horses : [];
+        if (!horses.length) return;
+        const h = horses[horses.length - 1]; // latest
+        // Prefill basic
+        setBasic(prev => ({
+          ...prev,
+          title: h.title || prev.title,
+          description: prev.description,
+          ad_types: Array.isArray(h.ad_types) && h.ad_types.length ? h.ad_types : prev.ad_types,
+          name: h.name || prev.name,
+          type: h.type || prev.type,
+          gender: h.gender || prev.gender,
+          age: h.age ?? prev.age,
+          height: h.height ?? prev.height,
+          breed: h.breed || prev.breed,
+          photos: Array.isArray(h.photos) ? h.photos : prev.photos,
+        }));
+        // Prefill availability
+        setAvailability(prev => ({
+          ...prev,
+          available_days: (h.available_days && typeof h.available_days === 'object') ? h.available_days : prev.available_days,
+          min_days_per_week: (typeof h.min_days_per_week === 'number') ? h.min_days_per_week : prev.min_days_per_week,
+          task_frequency: h.task_frequency || prev.task_frequency,
+        }));
+        // Prefill filters/expectations (best-effort)
+        setFilters(prev => ({
+          ...prev,
+          disciplines: Array.isArray(h.disciplines) ? h.disciplines : prev.disciplines,
+          level: h.level || prev.level,
+          max_jump_height: h.max_jump_height ?? prev.max_jump_height,
+        }));
+        setExpectations(prev => ({
+          ...prev,
+          required_tasks: Array.isArray(h.required_tasks) ? h.required_tasks : prev.required_tasks,
+          optional_tasks: Array.isArray(h.optional_tasks) ? h.optional_tasks : prev.optional_tasks,
+        }));
+      } catch (e) {
+        console.warn('Prefill horses failed', e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSave = async () => {
     // Bouw payload conform backend HorsePayload
     const payload = {};
+    // Basic validations
+    if (!basic.title || !basic.title.trim()) {
+      showToast('Titel is verplicht');
+      setStep(1);
+      return;
+    }
+    if (cost.cost_model && (cost.cost_amount === '' || Number(cost.cost_amount) <= 0)) {
+      showToast('Vul een geldig bedrag in bij kosten');
+      setStep(3);
+      return;
+    }
     if (basic.title) payload.title = basic.title;
     if (basic.description) payload.description = basic.description;
     if (Array.isArray(basic.ad_types)) {
@@ -135,9 +244,10 @@ export default function HorseAdWizard() {
 
     try {
       await api.ownerHorses.createOrUpdate(payload);
+      showToast('Advertentie opgeslagen');
       navigate('/dashboard');
     } catch (e) {
-      alert(`Opslaan mislukt: ${e.message}`);
+      showToast('Opslaan mislukt');
     }
   };
 
@@ -238,31 +348,7 @@ export default function HorseAdWizard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Foto's (max 5)</label>
-                  <input type="file" accept="image/*" multiple onChange={(e)=>setLocalFiles(Array.from(e.target.files || []).slice(0,5))} />
-                  <div className="mt-2 flex gap-2 flex-wrap">
-                    {localFiles.map((f, idx) => (
-                      <img key={idx} src={URL.createObjectURL(f)} alt="preview" className="w-20 h-20 object-cover rounded border" />
-                    ))}
-                    {basic.photos.map((url, idx) => (
-                      <div key={`p-${idx}`} className="relative">
-                        <img src={url} alt="uploaded" className="w-20 h-20 object-cover rounded border" />
-                        <button type="button" onClick={()=>setBasic({...basic, photos: basic.photos.filter((_,i)=>i!==idx)})} className="absolute -top-2 -right-2 bg-white border rounded-full px-2 text-sm">×</button>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" disabled={uploading || localFiles.length===0} onClick={async ()=>{
-                    try {
-                      setUploading(true);
-                      const res = await api.media.uploadPhotos(localFiles);
-                      const urls = Array.isArray(res.urls) ? res.urls.slice(0,5-basic.photos.length) : [];
-                      setBasic({...basic, photos: [...basic.photos, ...urls]});
-                      setLocalFiles([]);
-                    } catch (e) {
-                      alert(`Upload mislukt: ${e.message}`);
-                    } finally {
-                      setUploading(false);
-                    }
-                  }} className={`mt-2 px-3 py-2 rounded ${uploading ? 'bg-gray-300' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>{uploading ? 'Uploaden...' : 'Uploaden'}</button>
+                  <ImageUploader value={basic.photos} onChange={(urls)=>setBasic({...basic, photos: urls})} api={api} max={5} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Video URL</label>
@@ -517,7 +603,15 @@ export default function HorseAdWizard() {
             >
               {step === 1 ? 'Annuleren' : 'Vorige'}
             </button>
-
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => doAutoSave(true)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                title="Concept opslaan"
+              >
+                {saving ? 'Opslaan…' : 'Concept opslaan'}
+              </button>
             {step < totalSteps ? (
               <button onClick={() => setStep(step + 1)} className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors">
                 Volgende
@@ -527,9 +621,20 @@ export default function HorseAdWizard() {
                 Opslaan
               </button>
             )}
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Simple toast UI
+function Toast({ visible, message }) {
+  if (!visible) return null;
+  return (
+    <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+      {message}
     </div>
   );
 }
