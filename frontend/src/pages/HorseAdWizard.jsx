@@ -101,6 +101,16 @@ export default function HorseAdWizard() {
     showToast._t = window.setTimeout(() => setToast({ visible: false, message: '' }), ms);
   };
   const doAutoSave = async (showToast = false) => {
+    // Vereist: titel moet ingevuld zijn voor (auto)save
+    const hasTitle = !!(basic.title && basic.title.trim());
+    if (!hasTitle) {
+      if (showToast) {
+        setToast({ visible: true, message: 'Vul eerst een titel in' });
+        window.clearTimeout(doAutoSave._t);
+        doAutoSave._t = window.setTimeout(() => setToast({ visible: false, message: '' }), 2000);
+      }
+      return;
+    }
     // Bouw minimale payload; sla niet op als er echt niets is ingevoerd
     const payload = {};
     if (horseId) payload.id = Number(horseId);
