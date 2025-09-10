@@ -26,6 +26,21 @@ const OwnerOnboarding = () => {
   });
   const [address, setAddress] = useState({ country_code: 'NL', postcode: '', house_number: '', house_number_addition: '', street: '', city: '', lat: null, lon: null, geocode_confidence: null, needs_review: null });
 
+  // Validations: require all mandatory fields before allowing submit
+  const isAddressComplete = !!(
+    (address.country_code || '').trim() &&
+    (address.postcode || '').trim() &&
+    (address.house_number || '').trim() &&
+    (address.street || '').trim() &&
+    (address.city || '').trim()
+  );
+  const isFormValid = !!(
+    (basicInfo.first_name || '').trim() &&
+    (basicInfo.last_name || '').trim() &&
+    (basicInfo.phone || '').trim() &&
+    isAddressComplete
+  );
+
   // Prefill vanuit backend indien aanwezig
   useEffect(() => {
     (async () => {
@@ -73,6 +88,10 @@ const OwnerOnboarding = () => {
   };
 
   const handleSubmit = async () => {
+    if (!isFormValid) {
+      alert('Vul alle verplichte velden in (naam, telefoon en volledig adres).');
+      return;
+    }
     try {
       await api.ownerProfile.createOrUpdate({
         first_name: basicInfo.first_name,
@@ -167,6 +186,9 @@ const OwnerOnboarding = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Adres</label>
                 <AddressPicker value={address} onChange={setAddress} />
+                {!isAddressComplete && (
+                  <p className="mt-1 text-xs text-gray-500">Vul land, postcode, huisnummer, straat en plaats in.</p>
+                )}
               </div>
 
               <div>
@@ -292,7 +314,8 @@ const OwnerOnboarding = () => {
             
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 transition-colors"
+              disabled={!isFormValid}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFormValid ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
               Opslaan & Paard toevoegen
             </button>
