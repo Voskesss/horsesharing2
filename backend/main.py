@@ -349,6 +349,10 @@ class OwnerProfilePayload(BaseModel):
     geocode_confidence: Optional[float] = None
     needs_review: Optional[bool] = None
     date_of_birth: Optional[str] = None # optional, if we later want to compute age
+    # Guardian consent (if under 18)
+    parent_consent: Optional[bool] = None
+    parent_name: Optional[str] = None
+    parent_email: Optional[str] = None
 
 class HorsePayload(BaseModel):
     id: Optional[int] = None  # when provided -> update
@@ -459,6 +463,9 @@ async def get_owner_profile(
             "available_days": owner.available_days or {},
             "duration": owner.duration,
             "date_of_birth": owner.date_of_birth.isoformat() if owner.date_of_birth else None,
+            "parent_consent": owner.parent_consent,
+            "parent_name": owner.parent_name,
+            "parent_email": owner.parent_email,
         }
     }
 
@@ -513,6 +520,44 @@ async def create_or_update_owner_profile(
             owner.date_of_birth = datetime.strptime(payload.date_of_birth, "%Y-%m-%d").date()
         except Exception:
             pass
+
+    # Basic validation
+    # Phone: allow +, digits, spaces and hyphens; require at least 10 digits
+    if payload.phone is not None:
+        import re
+        digits = re.sub(r"\D", "", payload.phone)
+        if len(digits) < 10:
+            raise HTTPException(status_code=422, detail="Telefoonnummer ongeldig (minimaal 10 cijfers)")
+
+    # Date of birth -> set and compute minor flag
+    is_minor = False
+    if hasattr(payload, 'date_of_birth') and payload.date_of_birth is not None:
+        try:
+            from datetime import datetime, date
+            try:
+                dob = datetime.strptime(payload.date_of_birth, "%Y-%m-%d").date()
+            except ValueError:
+                dob = datetime.strptime(payload.date_of_birth, "%d-%m-%Y").date()
+            owner.date_of_birth = dob
+            today = date.today()
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            is_minor = age < 18
+        except Exception:
+            pass
+
+    # Guardian consent: required if minor
+    if is_minor:
+        if not payload.parent_consent or not (payload.parent_name or '').strip() or not (payload.parent_email or '').strip():
+            raise HTTPException(status_code=422, detail="Ouder/voogd toestemming vereist voor minderjarige (naam en e-mail verplicht)")
+        # basic email check
+        import re
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", payload.parent_email.strip()):
+            raise HTTPException(status_code=422, detail="E-mailadres ouder/voogd ongeldig")
+        owner.parent_consent = True
+        owner.parent_name = payload.parent_name.strip()
+        owner.parent_email = payload.parent_email.strip()
+        from datetime import datetime as _dt
+        owner.parent_consent_timestamp = _dt.utcnow()
 
     # Update User fields (name/phone) and sync to Kinde like rider flow
     name_updated = False

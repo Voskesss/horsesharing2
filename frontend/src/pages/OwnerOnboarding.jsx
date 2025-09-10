@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
@@ -25,6 +25,25 @@ const OwnerOnboarding = () => {
     date_of_birth: '',
   });
   const [address, setAddress] = useState({ country_code: 'NL', postcode: '', house_number: '', house_number_addition: '', street: '', city: '', lat: null, lon: null, geocode_confidence: null, needs_review: null });
+  const [errors, setErrors] = useState({});
+
+  const calcAge = (dobStr) => {
+    if (!dobStr) return null;
+    try {
+      const d = new Date(dobStr);
+      if (isNaN(d.getTime())) return null;
+      const t = new Date();
+      let age = t.getFullYear() - d.getFullYear();
+      const m = t.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && t.getDate() < d.getDate())) age--;
+      return age;
+    } catch { return null; }
+  };
+  const isMinor = useMemo(() => {
+    const a = calcAge(basicInfo.date_of_birth);
+    return a != null && a < 18;
+  }, [basicInfo.date_of_birth]);
+  const [guardian, setGuardian] = useState({ parent_consent: false, parent_name: '', parent_email: '' });
 
   // Validations: require all mandatory fields before allowing submit
   const isAddressComplete = !!(
@@ -38,7 +57,10 @@ const OwnerOnboarding = () => {
     (basicInfo.first_name || '').trim() &&
     (basicInfo.last_name || '').trim() &&
     (basicInfo.phone || '').trim() &&
+    (basicInfo.date_of_birth || '').trim() &&
     isAddressComplete
+  ) && (
+    !isMinor || (guardian.parent_consent && (guardian.parent_name||'').trim() && (guardian.parent_email||'').trim())
   );
 
   // Prefill vanuit backend indien aanwezig
@@ -88,8 +110,21 @@ const OwnerOnboarding = () => {
   };
 
   const handleSubmit = async () => {
-    if (!isFormValid) {
-      alert('Vul alle verplichte velden in (naam, telefoon en volledig adres).');
+    // Basic validations
+    const newErr = {};
+    const phone = (basicInfo.phone || '').trim();
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) newErr.phone = 'Voer een geldig telefoonnummer in (min. 10 cijfers).';
+    if (!(basicInfo.date_of_birth||'').trim()) newErr.date_of_birth = 'Geboortedatum is verplicht.';
+    if (isMinor) {
+      if (!guardian.parent_consent) newErr.parent_consent = 'Ouder/voogd moet instemmen.';
+      if (!(guardian.parent_name||'').trim()) newErr.parent_name = 'Naam ouder/voogd is verplicht.';
+      const pe = (guardian.parent_email||'').trim();
+      if (!/^([^@\s]+)@([^@\s]+)\.[^@\s]+$/.test(pe)) newErr.parent_email = 'Vul een geldig e‑mailadres in.';
+    }
+    setErrors(newErr);
+    if (Object.keys(newErr).length > 0 || !isFormValid) {
+      alert('Vul alle verplichte velden correct in.');
       return;
     }
     try {
@@ -109,6 +144,10 @@ const OwnerOnboarding = () => {
         geocode_confidence: address.geocode_confidence,
         needs_review: address.needs_review,
         date_of_birth: basicInfo.date_of_birth,
+        // guardian consent (if minor)
+        parent_consent: isMinor ? !!guardian.parent_consent : null,
+        parent_name: isMinor ? guardian.parent_name : null,
+        parent_email: isMinor ? guardian.parent_email : null,
         visible_radius: 10,
       });
       navigate('/owner/horses/new');
@@ -154,7 +193,7 @@ const OwnerOnboarding = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Voornaam</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Voornaam <span className="text-red-600">*</span></label>
                   <input
                     type="text"
                     value={basicInfo.first_name}
@@ -163,7 +202,7 @@ const OwnerOnboarding = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Achternaam</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Achternaam <span className="text-red-600">*</span></label>
                   <input
                     type="text"
                     value={basicInfo.last_name}
@@ -174,17 +213,18 @@ const OwnerOnboarding = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Telefoon</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Telefoon <span className="text-red-600">*</span></label>
                 <input
                   type="tel"
                   value={basicInfo.phone}
                   onChange={(e) => setBasicInfo({...basicInfo, phone: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.phone ? 'border-red-400' : 'border-gray-300'}`}
                 />
+                {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Adres</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Adres <span className="text-red-600">*</span></label>
                 <AddressPicker value={address} onChange={setAddress} />
                 {!isAddressComplete && (
                   <p className="mt-1 text-xs text-gray-500">Vul land, postcode, huisnummer, straat en plaats in.</p>
@@ -192,14 +232,40 @@ const OwnerOnboarding = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Geboortedatum (optioneel)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Geboortedatum <span className="text-red-600">*</span></label>
                 <input
                   type="date"
                   value={basicInfo.date_of_birth}
                   onChange={(e) => setBasicInfo({...basicInfo, date_of_birth: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.date_of_birth ? 'border-red-400' : 'border-gray-300'}`}
                 />
+                {errors.date_of_birth && <p className="mt-1 text-xs text-red-600">{errors.date_of_birth}</p>}
+                <p className="mt-1 text-xs text-gray-500">Onder 18? Dan vragen we toestemming van een ouder/voogd.</p>
               </div>
+
+              {isMinor && (
+                <div className="space-y-4 p-4 border rounded-lg bg-orange-50 border-orange-200">
+                  <h3 className="text-md font-semibold text-orange-800">Toestemming ouder/voogd (verplicht)</h3>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={guardian.parent_consent} onChange={(e)=> setGuardian({...guardian, parent_consent: e.target.checked})} />
+                    Ouder/voogd is op de hoogte en stemt in
+                  </label>
+                  {errors.parent_consent && <p className="text-xs text-red-600">{errors.parent_consent}</p>}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Naam ouder/voogd <span className="text-red-600">*</span></label>
+                      <input type="text" value={guardian.parent_name} onChange={(e)=> setGuardian({...guardian, parent_name: e.target.value})} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.parent_name ? 'border-red-400' : 'border-gray-300'}`} />
+                      {errors.parent_name && <p className="mt-1 text-xs text-red-600">{errors.parent_name}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">E‑mail ouder/voogd <span className="text-red-600">*</span></label>
+                      <input type="email" value={guardian.parent_email} onChange={(e)=> setGuardian({...guardian, parent_email: e.target.value})} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.parent_email ? 'border-red-400' : 'border-gray-300'}`} />
+                      {errors.parent_email && <p className="mt-1 text-xs text-red-600">{errors.parent_email}</p>}
+                    </div>
+                  </div>
+                  <p className="text-xs text-orange-700">We slaan deze bevestiging op om te voldoen aan de AVG. Verificatie per e‑mail volgt later.</p>
+                </div>
+              )}
             </div>
           )}
 
