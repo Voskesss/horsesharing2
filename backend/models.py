@@ -130,7 +130,14 @@ class OwnerProfile(Base):
     # Location
     postcode = Column(String(10), nullable=False)
     house_number = Column(String(10), nullable=True)
+    house_number_addition = Column(String(20), nullable=True)
+    street = Column(String(255), nullable=True)
     city = Column(String(100), nullable=True)
+    country_code = Column(String(2), nullable=True)
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    geocode_confidence = Column(Float, nullable=True)
+    needs_review = Column(Boolean, nullable=True)
     visible_radius = Column(Integer, nullable=False)  # km (3/5/10/20/30)
     
     # Availability

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
+import AddressPicker from '../components/AddressPicker';
 
 const OwnerOnboarding = () => {
   const navigate = useNavigate();
@@ -20,11 +21,10 @@ const OwnerOnboarding = () => {
     first_name: '',
     last_name: '',
     phone: '',
-    postcode: '',
-    house_number: '',
-    city: '',
+    // address is managed separately
     date_of_birth: '',
   });
+  const [address, setAddress] = useState({ country_code: 'NL', postcode: '', house_number: '', house_number_addition: '', street: '', city: '', lat: null, lon: null, geocode_confidence: null, needs_review: null });
 
   // Prefill vanuit backend indien aanwezig
   useEffect(() => {
@@ -38,10 +38,20 @@ const OwnerOnboarding = () => {
             first_name: (resp.user?.kinde_given_name || '').trim(),
             last_name: (resp.user?.kinde_family_name || '').trim(),
             phone: (resp.user?.phone || '').trim(),
+            date_of_birth: resp.profile.date_of_birth || '',
+          }));
+          setAddress(prev => ({
+            ...prev,
+            country_code: resp.profile.country_code || prev.country_code || 'NL',
             postcode: resp.profile.postcode || '',
             house_number: resp.profile.house_number || '',
+            house_number_addition: resp.profile.house_number_addition || '',
+            street: resp.profile.street || '',
             city: resp.profile.city || '',
-            date_of_birth: resp.profile.date_of_birth || '',
+            lat: resp.profile.lat ?? null,
+            lon: resp.profile.lon ?? null,
+            geocode_confidence: resp.profile.geocode_confidence ?? null,
+            needs_review: resp.profile.needs_review ?? null,
           }));
         }
       } catch (e) {
@@ -68,11 +78,18 @@ const OwnerOnboarding = () => {
         first_name: basicInfo.first_name,
         last_name: basicInfo.last_name,
         phone: basicInfo.phone,
-        postcode: basicInfo.postcode,
-        house_number: basicInfo.house_number,
-        city: basicInfo.city,
+        // address fields
+        country_code: address.country_code || 'NL',
+        postcode: address.postcode,
+        house_number: address.house_number,
+        house_number_addition: address.house_number_addition || '',
+        street: address.street,
+        city: address.city,
+        lat: address.lat,
+        lon: address.lon,
+        geocode_confidence: address.geocode_confidence,
+        needs_review: address.needs_review,
         date_of_birth: basicInfo.date_of_birth,
-        // house_number/city zijn in backend nog niet gemigreerd: bewaren voor later
         visible_radius: 10,
       });
       navigate('/owner/horses/new');
@@ -148,35 +165,8 @@ const OwnerOnboarding = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Postcode</label>
-                <input
-                  type="text"
-                  value={basicInfo.postcode}
-                  onChange={(e) => setBasicInfo({...basicInfo, postcode: e.target.value})}
-                  placeholder="1234AB"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Huisnummer</label>
-                  <input
-                    type="text"
-                    value={basicInfo.house_number}
-                    onChange={(e) => setBasicInfo({...basicInfo, house_number: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Plaats</label>
-                  <input
-                    type="text"
-                    value={basicInfo.city}
-                    onChange={(e) => setBasicInfo({...basicInfo, city: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Adres</label>
+                <AddressPicker value={address} onChange={setAddress} />
               </div>
 
               <div>

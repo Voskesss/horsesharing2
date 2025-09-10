@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -12,6 +12,7 @@ from models import User, RiderProfile, OwnerProfile, HorseProfile
 from auth import get_current_user, get_optional_user
 import uvicorn
 import uuid
+import time
 
 # Optional Azure imports
 AZURE_AVAILABLE = False
@@ -44,6 +45,139 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "horsesharing-api"}
+
+# -----------------------------
+# Geo lookup (PDOK NL + Nominatim fallback)
+# -----------------------------
+_geo_cache = {}
+
+def _geo_cache_get(key: str):
+    item = _geo_cache.get(key)
+    if not item:
+        return None
+    expires, val = item
+    if time.time() > expires:
+        _geo_cache.pop(key, None)
+        return None
+    return val
+
+def _geo_cache_set(key: str, val: dict, ttl: int = 3600):
+    _geo_cache[key] = (time.time() + ttl, val)
+
+@app.get("/geo/lookup")
+async def geo_lookup(
+    country: str = Query("NL", min_length=2, max_length=2),
+    postcode: str = Query(...),
+    number: str = Query(...),
+    addition: str = Query(""),
+):
+    country = (country or "").upper()
+    key = f"{country}:{postcode}:{number}:{addition}"
+    cached = _geo_cache_get(key)
+    if cached:
+        return cached
+
+    # NL via PDOK Locatieserver BAG
+    if country == "NL":
+        try:
+            pc = (postcode or "").replace(" ", "").upper()
+            # Gebruik nieuw PDOK endpoint (oude domein kan DNS-fouten geven)
+            url = (
+                "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free"
+                f"?q=postcode:{pc}+AND+huisnummer:{number}"
+            )
+            r = requests.get(url, timeout=5)
+            r.raise_for_status()
+            data = r.json()
+            docs = data.get("response", {}).get("docs", [])
+            doc = docs[0] if docs else None
+            if doc:
+                street = doc.get("straatnaam", "")
+                city = doc.get("woonplaatsnaam", "")
+                # centroide_ll kan "POINT(lon lat)" of "lon lat" zijn
+                ll = doc.get("centroide_ll") or doc.get("geometrie_ll") or ""
+                lat = lon = None
+                if ll.startswith("POINT(") and ll.endswith(")"):
+                    # POINT(lon lat)
+                    coords = ll[len("POINT("):-1].strip().split(" ")
+                    if len(coords) == 2:
+                        lon = float(coords[0]); lat = float(coords[1])
+                elif " " in ll:
+                    parts = ll.split(" ")
+                    lon = float(parts[0]); lat = float(parts[1])
+                res = {
+                    "street": street,
+                    "city": city,
+                    "postcode": f"{pc[:4]} {pc[4:]}" if len(pc) == 6 else postcode,
+                    "house_number": number,
+                    "addition": addition or None,
+                    "country_code": country,
+                    "lat": lat,
+                    "lon": lon,
+                    "source": "PDOK",
+                    "confidence": 0.95 if street and city else 0.7,
+                }
+                _geo_cache_set(key, res)
+                return res
+        except Exception as e:
+            print(f"PDOK lookup failed: {e}")
+
+    # Fallback: Nominatim (OSM)
+    try:
+        cc = (country or "").lower()
+        base = "https://nominatim.openstreetmap.org/search"
+        # 1) Structured query (beperkt op land en postcode)
+        params = {
+            "format": "json",
+            "addressdetails": 1,
+            "limit": 1,
+            "countrycodes": cc,
+            "postalcode": postcode,
+            "street": f"{number} {addition}".strip(),
+        }
+        resp = requests.get(base, params=params, headers={"User-Agent": "HorseSharing2/1.0"}, timeout=8)
+        resp.raise_for_status()
+        arr = resp.json()
+        if not arr:
+            # 2) Tekst query maar nog steeds met countrycodes
+            q = f"{postcode} {number} {addition}"
+            params2 = {
+                "q": q,
+                "format": "json",
+                "addressdetails": 1,
+                "limit": 1,
+                "countrycodes": cc,
+            }
+            resp = requests.get(base, params=params2, headers={"User-Agent": "HorseSharing2/1.0"}, timeout=8)
+            resp.raise_for_status()
+            arr = resp.json()
+        if arr:
+            it = arr[0]
+            addr = it.get("address", {})
+            # Validatie: land en postcode moeten overeenkomen
+            match_cc = (addr.get("country_code") or cc).upper() == country
+            norm_postcode_req = (postcode or '').replace(' ', '').upper()
+            norm_postcode_res = (addr.get("postcode") or '').replace(' ', '').upper()
+            if not match_cc or (norm_postcode_res and norm_postcode_res != norm_postcode_req):
+                raise HTTPException(status_code=404, detail="Adres niet gevonden (valt buiten land/postcode)")
+            res = {
+                "street": addr.get("road") or addr.get("pedestrian") or "",
+                "city": addr.get("city") or addr.get("town") or addr.get("village") or "",
+                "postcode": addr.get("postcode") or postcode,
+                "house_number": number,
+                "addition": addition or None,
+                "country_code": (addr.get("country_code") or country).upper(),
+                "lat": float(it.get("lat")) if it.get("lat") else None,
+                "lon": float(it.get("lon")) if it.get("lon") else None,
+                "source": "OSM",
+                "confidence": 0.7,
+            }
+            _geo_cache_set(key, res)
+            return res
+    except Exception as e:
+        print(f"OSM lookup failed: {e}")
+
+    raise HTTPException(status_code=404, detail="Adres niet gevonden")
 
 @app.get("/auth/me")
 async def get_me(request: Request, current_user: User = Depends(get_current_user)):
@@ -205,8 +339,15 @@ class OwnerProfilePayload(BaseModel):
     # Owner profile fields
     postcode: Optional[str] = None
     visible_radius: Optional[int] = None
-    house_number: Optional[str] = None  # future: may require migration
-    city: Optional[str] = None          # future: may require migration
+    house_number: Optional[str] = None
+    house_number_addition: Optional[str] = None
+    street: Optional[str] = None
+    city: Optional[str] = None
+    country_code: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    geocode_confidence: Optional[float] = None
+    needs_review: Optional[bool] = None
     date_of_birth: Optional[str] = None # optional, if we later want to compute age
 
 class HorsePayload(BaseModel):
@@ -306,7 +447,14 @@ async def get_owner_profile(
         "profile": {
             "postcode": owner.postcode,
             "house_number": owner.house_number,
+            "house_number_addition": owner.house_number_addition,
+            "street": owner.street,
             "city": owner.city,
+            "country_code": owner.country_code,
+            "lat": owner.lat,
+            "lon": owner.lon,
+            "geocode_confidence": owner.geocode_confidence,
+            "needs_review": owner.needs_review,
             "visible_radius": owner.visible_radius,
             "available_days": owner.available_days or {},
             "duration": owner.duration,
@@ -342,8 +490,22 @@ async def create_or_update_owner_profile(
     # New fields now supported
     if hasattr(payload, 'house_number') and payload.house_number is not None:
         owner.house_number = payload.house_number
+    if hasattr(payload, 'house_number_addition') and payload.house_number_addition is not None:
+        owner.house_number_addition = payload.house_number_addition
+    if hasattr(payload, 'street') and payload.street is not None:
+        owner.street = payload.street
     if hasattr(payload, 'city') and payload.city is not None:
         owner.city = payload.city
+    if hasattr(payload, 'country_code') and payload.country_code is not None:
+        owner.country_code = (payload.country_code or '').upper()[:2]
+    if hasattr(payload, 'lat') and payload.lat is not None:
+        owner.lat = float(payload.lat)
+    if hasattr(payload, 'lon') and payload.lon is not None:
+        owner.lon = float(payload.lon)
+    if hasattr(payload, 'geocode_confidence') and payload.geocode_confidence is not None:
+        owner.geocode_confidence = float(payload.geocode_confidence)
+    if hasattr(payload, 'needs_review') and payload.needs_review is not None:
+        owner.needs_review = bool(payload.needs_review)
     if hasattr(payload, 'date_of_birth') and payload.date_of_birth is not None:
         try:
             # Accept YYYY-MM-DD
