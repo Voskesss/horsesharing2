@@ -798,7 +798,9 @@ async def create_or_update_horse(
         if not horse:
             raise HTTPException(status_code=404, detail="Horse not found")
     else:
+        # Nieuw paard: standaard als concept (niet gepubliceerd)
         horse = HorseProfile(owner_profile_id=owner.id, name=payload.name or "", type=payload.type or "pony")
+        horse.is_available = False
         db.add(horse)
 
     # payload-gedreven updates
