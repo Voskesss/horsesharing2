@@ -176,7 +176,7 @@ const OwnerOnboarding = () => {
         parent_email: isMinor ? guardian.parent_email : null,
         visible_radius: 10,
       });
-      navigate('/dashboard');
+      navigate('/owner/profile');
     } catch (e) {
       alert(`Opslaan mislukt: ${e.message}`);
     }
