@@ -691,6 +691,7 @@ async def list_owner_horses(
             {
                 "id": h.id,
                 "title": h.title,
+                "description": h.description,
                 "ad_type": h.ad_type,
                 "ad_types": h.ad_types or [],
                 "name": h.name,
@@ -749,7 +750,7 @@ async def upload_media(
     current_user: User = Depends(get_current_user),
 ):
     """Uploads images either to Azure Blob Storage (if configured) or locally (/uploads)."""
-    allowed_ext = [".jpg", ".jpeg", ".png", ".webp"]
+    allowed_ext = [".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov", ".webm"]
     use_azure = os.getenv("AZURE_STORAGE_CONNECTION_STRING") and os.getenv("AZURE_CONTAINER") and AZURE_AVAILABLE
     try:
         # Debug: log incoming request details

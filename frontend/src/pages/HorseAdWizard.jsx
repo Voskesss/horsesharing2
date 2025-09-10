@@ -228,7 +228,7 @@ export default function HorseAdWizard() {
         setBasic(prev => ({
           ...prev,
           title: h.title || prev.title,
-          description: prev.description,
+          description: h.description || prev.description,
           ad_types: Array.isArray(h.ad_types) && h.ad_types.length ? h.ad_types : prev.ad_types,
           name: h.name || prev.name,
           type: h.type || prev.type,
@@ -376,6 +376,19 @@ export default function HorseAdWizard() {
       showToast('Opslaan mislukt');
     }
   };
+
+  // Stap 1 validaties voor 'Volgende'
+  const hasAdTypes = Array.isArray(basic.ad_types) && basic.ad_types.length > 0;
+  const hasTitle = !!(basic.title && basic.title.trim());
+  const hasDesc = !!(basic.description && basic.description.trim());
+  const hasName = !!(basic.name && basic.name.trim());
+  const hasType = !!basic.type;
+  const hasGender = !!basic.gender;
+  const hasAge = basic.age !== '' && basic.age != null;
+  const hasHeight = basic.height !== '' && basic.height != null;
+  const hasAddrCoreStep1 = (stableAddress.postcode && stableAddress.house_number) || (stableAddress.street || stableAddress.city);
+  const hasPhotos = Array.isArray(basic.photos) && basic.photos.length > 0;
+  const step1Ready = hasAdTypes && hasTitle && hasDesc && hasName && hasType && hasGender && hasAge && hasHeight && hasAddrCoreStep1 && hasPhotos;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 py-12 px-4">
@@ -772,9 +785,20 @@ export default function HorseAdWizard() {
                 {saving ? 'Opslaan…' : 'Concept opslaan'}
               </button>
             {step < totalSteps ? (
-              <button onClick={() => setStep(step + 1)} className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors">
-                Volgende
-              </button>
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={() => step1Ready ? setStep(step + 1) : null}
+                  disabled={step === 1 ? !step1Ready : false}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${step === 1 ? (!step1Ready ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700') : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                >
+                  Volgende
+                </button>
+                {step === 1 && !step1Ready && (
+                  <div className="mt-1 text-xs text-gray-500 text-right">
+                    Vul eerst: reden, titel, advertentietekst, naam, type, geslacht, leeftijd, stokmaat, locatie en minstens 1 foto.
+                  </div>
+                )}
+              </div>
             ) : (
               <button onClick={handleSave} className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 transition-colors">
                 Opslaan
