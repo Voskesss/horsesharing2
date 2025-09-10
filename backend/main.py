@@ -779,6 +779,7 @@ async def upload_media(
     base = str(request.base_url).rstrip('/')
     urls = [f"{base}/uploads/{name}" for name in saved_files]
     return {"urls": urls}
+@app.post("/owner/horses")
 async def create_or_update_horse(
     payload: HorsePayload,
     current_user: User = Depends(get_current_user),
@@ -886,6 +887,22 @@ async def create_or_update_horse(
     db.commit()
     db.refresh(horse)
     return {"message": "Horse saved", "horse_id": horse.id}
+
+@app.delete("/owner/horses/{horse_id}")
+async def delete_horse(
+    horse_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    owner = db.query(OwnerProfile).filter(OwnerProfile.user_id == current_user.id).first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Owner profile not found")
+    horse = db.query(HorseProfile).filter(HorseProfile.id == horse_id, HorseProfile.owner_profile_id == owner.id).first()
+    if not horse:
+        raise HTTPException(status_code=404, detail="Horse not found")
+    db.delete(horse)
+    db.commit()
+    return {"message": "Horse deleted", "horse_id": horse_id}
 # Let only one GET endpoint exist (frontend-shaped response)
 
 @app.post("/rider-profile")

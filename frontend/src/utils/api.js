@@ -87,6 +87,18 @@ export const createAPI = (getToken) => ({
         body: JSON.stringify(horse || {}),
       }, token);
     },
+    async delete(id) {
+      const token = await getToken();
+      const resp = await fetch(`${API_BASE_URL}/owner/horses/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!resp.ok) {
+        const text = await resp.text().catch(()=>`HTTP ${resp.status}`);
+        throw new Error(text);
+      }
+      return resp.json();
+    }
   },
 
   // Media uploads (images)

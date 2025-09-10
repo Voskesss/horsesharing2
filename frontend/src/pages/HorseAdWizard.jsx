@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
 import ImageUploader from '../components/ImageUploader';
@@ -18,6 +18,7 @@ export default function HorseAdWizard() {
   const navigate = useNavigate();
   const { isAuthenticated, getToken } = useKindeAuth();
   const api = createAPI(getToken);
+  const { id } = useParams();
 
   if (!isAuthenticated) {
     navigate('/');
@@ -25,6 +26,7 @@ export default function HorseAdWizard() {
   }
 
   const [step, setStep] = useState(1);
+  const [horseId, setHorseId] = useState(id ? String(id) : null);
   const totalSteps = 5;
 
   // Stap 1: Titel/verhaal + basis + type + media
@@ -101,6 +103,7 @@ export default function HorseAdWizard() {
   const doAutoSave = async (showToast = false) => {
     // Bouw minimale payload; sla niet op als er echt niets is ingevoerd
     const payload = {};
+    if (horseId) payload.id = Number(horseId);
     if (basic.title) payload.title = basic.title;
     if (Array.isArray(basic.ad_types) && basic.ad_types.length) {
       payload.ad_types = basic.ad_types;
@@ -143,7 +146,8 @@ export default function HorseAdWizard() {
     if (Object.keys(payload).length === 0) return;
     try {
       setSaving(true);
-      await api.ownerHorses.createOrUpdate(payload);
+      const res = await api.ownerHorses.createOrUpdate(payload);
+      if (res && res.horse_id && !horseId) setHorseId(String(res.horse_id));
       if (showToast) {
         setToast({ visible: true, message: 'Concept opgeslagen' });
         window.clearTimeout(doAutoSave._t);
@@ -164,15 +168,15 @@ export default function HorseAdWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basic, availability, cost, filters, expectations]);
 
-  // Prefill from existing latest horse (draft)
+  // Prefill only when editing an existing horse (id present)
   useEffect(() => {
+    if (!id) return; // new: no prefill
     (async () => {
       try {
         const res = await api.ownerHorses.list();
         const horses = Array.isArray(res?.horses) ? res.horses : [];
-        if (!horses.length) return;
-        const h = horses[horses.length - 1]; // latest
-        // Prefill basic
+        const h = horses.find(x => String(x.id) === String(id));
+        if (!h) return;
         setBasic(prev => ({
           ...prev,
           title: h.title || prev.title,
@@ -186,14 +190,12 @@ export default function HorseAdWizard() {
           breed: h.breed || prev.breed,
           photos: Array.isArray(h.photos) ? h.photos : prev.photos,
         }));
-        // Prefill availability
         setAvailability(prev => ({
           ...prev,
           available_days: (h.available_days && typeof h.available_days === 'object') ? h.available_days : prev.available_days,
           min_days_per_week: (typeof h.min_days_per_week === 'number') ? h.min_days_per_week : prev.min_days_per_week,
           task_frequency: h.task_frequency || prev.task_frequency,
         }));
-        // Prefill filters/expectations (best-effort)
         setFilters(prev => ({
           ...prev,
           disciplines: Array.isArray(h.disciplines) ? h.disciplines : prev.disciplines,
@@ -208,20 +210,18 @@ export default function HorseAdWizard() {
           ...prev,
           required_tasks: Array.isArray(h.required_tasks) ? h.required_tasks : prev.required_tasks,
           optional_tasks: Array.isArray(h.optional_tasks) ? h.optional_tasks : prev.optional_tasks,
-          // keep required_skills/personality if present later
         }));
-        // Prefill costs
         setCost(prev => ({
           ...prev,
           cost_model: h.cost_model || prev.cost_model,
           cost_amount: (h.cost_amount != null ? String(h.cost_amount) : prev.cost_amount),
         }));
       } catch (e) {
-        console.warn('Prefill horses failed', e);
+        console.warn('Prefill horse by id failed', e);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [id]);
 
   const handleSave = async () => {
     // Bouw payload conform backend HorsePayload
@@ -280,9 +280,11 @@ export default function HorseAdWizard() {
     if (expectations.rules) payload.rules = expectations.rules;
 
     try {
-      await api.ownerHorses.createOrUpdate(payload);
+      if (horseId) payload.id = Number(horseId);
+      const res = await api.ownerHorses.createOrUpdate(payload);
+      if (res && res.horse_id) setHorseId(String(res.horse_id));
       showToast('Advertentie opgeslagen');
-      navigate('/dashboard');
+      navigate('/owner/horses');
     } catch (e) {
       showToast('Opslaan mislukt');
     }
@@ -296,7 +298,7 @@ export default function HorseAdWizard() {
             <div className="w-16 h-16 bg-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">🐴</span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Nieuw Paard toevoegen</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{id ? 'Advertentie bewerken' : 'Nieuw Paard toevoegen'}</h1>
             <p className="text-gray-600 mt-2">Vul basis en beschikbaarheid in voor je advertentie.</p>
           </div>
 
@@ -662,6 +664,8 @@ export default function HorseAdWizard() {
           </div>
         </div>
       </div>
+      {/* Toast */}
+      <Toast visible={toast.visible} message={toast.message} />
     </div>
   );
 }

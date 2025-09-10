@@ -10,6 +10,7 @@ import OwnerOnboarding from './pages/OwnerOnboarding';
 import HorseAdWizard from './pages/HorseAdWizard';
 import Dashboard from './pages/Dashboard';
 import OwnerProfile from './pages/OwnerProfile';
+import OwnerHorses from './pages/OwnerHorses';
 
 function App() {
   return (
@@ -30,6 +31,8 @@ function App() {
             <Route path="/rider-profile" element={<RiderProfile />} />
             <Route path="/owner-onboarding" element={<OwnerOnboarding />} />
             <Route path="/owner/horses/new" element={<HorseAdWizard />} />
+            <Route path="/owner/horses/:id/edit" element={<HorseAdWizard />} />
+            <Route path="/owner/horses" element={<OwnerHorses />} />
             <Route path="/owner/profile" element={<OwnerProfile />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
