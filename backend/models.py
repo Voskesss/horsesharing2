@@ -195,6 +195,7 @@ class HorseProfile(Base):
     # Media
     photos = Column(JSON, nullable=True)  # Array of photo URLs
     video = Column(String(500), nullable=True)  # Video URL
+    videos = Column(JSON, nullable=True)  # Array of video URLs
     
     # Basic Info
     title = Column(String(255), nullable=True)

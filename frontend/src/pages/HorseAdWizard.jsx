@@ -4,6 +4,7 @@ import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
 import ImageUploader from '../components/ImageUploader';
 import AddressPicker from '../components/AddressPicker';
+import VideoUploader from '../components/VideoUploader';
 
 const defaultSchedule = () => ({
   maandag: [],
@@ -43,6 +44,7 @@ export default function HorseAdWizard() {
     breed: '',
     photos: [],
     video_intro_url: '',
+    video: '',
   });
   // Staladres (paardlocatie)
   const [stableAddress, setStableAddress] = useState({
@@ -149,6 +151,7 @@ export default function HorseAdWizard() {
     if (basic.breed) payload.breed = basic.breed;
     if (basic.description) payload.description = basic.description;
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
+    if (basic.video) payload.video = basic.video;
     // Faciliteiten
     Object.entries(facilities).forEach(([k,v])=>{ if (v) payload[k] = true; });
     // Staladres meenemen wanneer postcode + huisnummer is ingevuld of straat/stad handmatig
@@ -237,6 +240,8 @@ export default function HorseAdWizard() {
           height: h.height ?? prev.height,
           breed: h.breed || prev.breed,
           photos: Array.isArray(h.photos) ? h.photos : prev.photos,
+          video: h.video || h.video_intro_url || prev.video,
+          video_intro_url: h.video || h.video_intro_url || prev.video_intro_url,
         }));
         setAvailability(prev => ({
           ...prev,
@@ -320,7 +325,8 @@ export default function HorseAdWizard() {
     if (basic.height !== '' && basic.height != null) payload.height = Number(basic.height);
     if (basic.breed) payload.breed = basic.breed;
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
-    if (basic.video_intro_url) payload.video_intro_url = basic.video_intro_url;
+    if (basic.video) payload.video = basic.video;
+    if (basic.video_intro_url) payload.video_intro_url = basic.video_intro_url; // compat
 
     // Faciliteiten
     Object.entries(facilities).forEach(([k,v])=>{ if (v) payload[k] = true; });
@@ -524,8 +530,10 @@ export default function HorseAdWizard() {
                   <ImageUploader value={basic.photos} onChange={(urls)=>setBasic({...basic, photos: urls})} api={api} max={5} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Video URL</label>
-                  <input type="url" value={basic.video_intro_url} onChange={(e)=>setBasic({...basic, video_intro_url: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Video upload</label>
+                  <VideoUploader value={basic.video} onChange={(url)=>setBasic({...basic, video: url})} api={api} />
+                  <div className="mt-2 text-xs text-gray-500">of plak een video-URL:</div>
+                  <input type="url" placeholder="https://…" value={basic.video_intro_url} onChange={(e)=>setBasic({...basic, video_intro_url: e.target.value})} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
               </div>
             </div>

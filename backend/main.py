@@ -371,6 +371,7 @@ class HorsePayload(BaseModel):
     breed: Optional[str] = None
     photos: Optional[list] = None
     video_intro_url: Optional[str] = None
+    video: Optional[str] = None
     disciplines: Optional[dict] = None   # simple dict or list mapping
     max_jump_height: Optional[int] = None
     temperament: Optional[list] = None
@@ -702,6 +703,7 @@ async def list_owner_horses(
                 "breed": h.breed,
                 "photos": h.photos or [],
                 "video": h.video,
+                "video_intro_url": h.video,  # compat
                 "disciplines": h.disciplines or {},
                 "max_jump_height": h.max_jump_height,
                 "level": h.level,
@@ -785,7 +787,19 @@ async def upload_media(
                 blob_client = container_client.get_blob_client(blob_name)
                 data = await f.read()
                 print(f"[upload_media] azure upload name={filename} -> blob={blob_name} size={len(data)}")
-                content_type = "image/png" if ext == ".png" else ("image/webp" if ext == ".webp" else "image/jpeg")
+                # Determine proper content type
+                if ext == ".mp4":
+                    content_type = "video/mp4"
+                elif ext == ".mov":
+                    content_type = "video/quicktime"
+                elif ext == ".webm":
+                    content_type = "video/webm"
+                elif ext == ".png":
+                    content_type = "image/png"
+                elif ext == ".webp":
+                    content_type = "image/webp"
+                else:
+                    content_type = "image/jpeg"
                 blob_client.upload_blob(data, overwrite=True, content_settings=ContentSettings(content_type=content_type))
                 if public_base:
                     urls.append(f"{public_base.rstrip('/')}/{blob_name}")
@@ -884,6 +898,8 @@ async def create_or_update_horse(
         horse.photos = payload.photos
     if payload.video_intro_url is not None:
         horse.video = payload.video_intro_url
+    if payload.video is not None:
+        horse.video = payload.video
     if payload.required_tasks is not None:
         horse.required_tasks = payload.required_tasks
     if payload.optional_tasks is not None:
