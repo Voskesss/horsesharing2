@@ -52,6 +52,14 @@ const Dashboard = () => {
                 Advertentie voor paard/pony plaatsen
               </button>
             )}
+            {me?.has_owner_profile && (
+              <button
+                onClick={() => navigate('/owner/horses')}
+                className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50"
+              >
+                Mijn paarden
+              </button>
+            )}
             <button
               onClick={() => navigate('/owner/profile')}
               className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50"
@@ -78,6 +86,13 @@ const Dashboard = () => {
               <button onClick={()=>navigate('/owner/profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Eigenaar →</button>
               <button onClick={()=>navigate('/rider-profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Rijder →</button>
             </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
+            <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center mb-3">🐴</div>
+            <h3 className="font-semibold text-gray-900 mb-1">Mijn paarden</h3>
+            <p className="text-sm text-gray-600 mb-3">Bekijk en beheer je concepten en advertenties.</p>
+            <button onClick={()=>navigate('/owner/horses')} className="text-teal-600 text-sm font-medium hover:text-teal-700">Openen →</button>
           </div>
 
           <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">

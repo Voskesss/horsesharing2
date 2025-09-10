@@ -61,3 +61,4 @@ Gebruik dit bestand als centrale to‑do lijst. Vink items af en voeg taken toe 
 - aanvullen op riderprofiel : al eerder bijridejr geweest, zo ja, wat voor een paard, voor hoe lang, heb je wedstridejn gerden, welk niveau etc. 
 - Evt een kart waarop men kan zien in de omeving. 
 - melding maken bij vreemd profielen
+- ai moet matchen op vijr text vedken en alles dat ineveuld is dus naar vector databse brengen of mono
