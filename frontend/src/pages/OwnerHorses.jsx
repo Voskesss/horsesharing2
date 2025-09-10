@@ -25,6 +25,16 @@ const OwnerHorses = () => {
     showToast._t = window.setTimeout(() => setToast({ visible: false, message: '' }), ms);
   };
 
+  const setPublished = async (id, publish) => {
+    try {
+      await api.ownerHorses.createOrUpdate({ id, is_available: !!publish });
+      setItems(prev => prev.map(x => x.id === id ? { ...x, is_available: !!publish } : x));
+      showToast(publish ? 'Gepubliceerd' : 'Teruggezet naar concept');
+    } catch (e) {
+      showToast('Actie mislukt');
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) { navigate('/'); return; }
     (async () => {
@@ -77,7 +87,12 @@ const OwnerHorses = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-sm text-gray-500">#{h.id}</div>
-                      <h3 className="text-lg font-semibold text-gray-900">{h.title || '(titel ontbreekt)'}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <span>{h.title || '(titel ontbreekt)'}</span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full border ${h.is_available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                          {h.is_available ? 'gepubliceerd' : 'concept'}
+                        </span>
+                      </h3>
                       <div className="text-sm text-gray-600 mt-1">
                         {(h.type === 'pony' ? 'Pony' : 'Paard')}{h.age ? ` · ${h.age} jaar` : ''}{h.height ? ` · ${h.height} cm` : ''}
                       </div>
@@ -93,8 +108,13 @@ const OwnerHorses = () => {
                       <div className="w-20 h-20 rounded-lg bg-gray-100 border flex items-center justify-center">🐴</div>
                     )}
                   </div>
-                  <div className="mt-4 flex gap-3">
+                  <div className="mt-4 flex gap-3 flex-wrap">
                     <button onClick={() => navigate(`/owner/horses/${h.id}/edit`)} className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Bewerken</button>
+                    {h.is_available ? (
+                      <button onClick={() => setPublished(h.id, false)} className="px-3 py-1.5 text-sm rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300">Naar concept</button>
+                    ) : (
+                      <button onClick={() => setPublished(h.id, true)} className="px-3 py-1.5 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Publiceren</button>
+                    )}
                     <button onClick={() => onDelete(h.id)} className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Verwijderen</button>
                   </div>
                 </div>
