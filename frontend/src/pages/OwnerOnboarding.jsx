@@ -26,6 +26,8 @@ const OwnerOnboarding = () => {
   });
   const [address, setAddress] = useState({ country_code: 'NL', postcode: '', house_number: '', house_number_addition: '', street: '', city: '', lat: null, lon: null, geocode_confidence: null, needs_review: null });
   const [errors, setErrors] = useState({});
+  const [serverMinor, setServerMinor] = useState(null);
+  const [prefillDob, setPrefillDob] = useState('');
 
   const calcAge = (dobStr) => {
     if (!dobStr) return null;
@@ -40,9 +42,14 @@ const OwnerOnboarding = () => {
     } catch { return null; }
   };
   const isMinor = useMemo(() => {
-    const a = calcAge(basicInfo.date_of_birth);
+    // Prefer server-provided is_minor only if DOB hasn't changed since prefill
+    const dob = (basicInfo.date_of_birth || '').trim();
+    if ((serverMinor !== null && serverMinor !== undefined) && dob === (prefillDob || '')) {
+      return !!serverMinor;
+    }
+    const a = calcAge(dob);
     return a != null && a < 18;
-  }, [basicInfo.date_of_birth]);
+  }, [basicInfo.date_of_birth, serverMinor, prefillDob]);
   const [guardian, setGuardian] = useState({ parent_consent: false, parent_name: '', parent_email: '' });
 
   // Validations: require all mandatory fields before allowing submit
@@ -77,6 +84,12 @@ const OwnerOnboarding = () => {
             phone: (resp.user?.phone || '').trim(),
             date_of_birth: resp.profile.date_of_birth || '',
           }));
+          setPrefillDob(resp.profile.date_of_birth || '');
+          if (typeof resp.profile.is_minor === 'boolean') {
+            setServerMinor(resp.profile.is_minor);
+          } else {
+            setServerMinor(null);
+          }
           setAddress(prev => ({
             ...prev,
             country_code: resp.profile.country_code || prev.country_code || 'NL',
@@ -89,6 +102,13 @@ const OwnerOnboarding = () => {
             lon: resp.profile.lon ?? null,
             geocode_confidence: resp.profile.geocode_confidence ?? null,
             needs_review: resp.profile.needs_review ?? null,
+          }));
+          // Prefill guardian fields if present
+          setGuardian(prev => ({
+            ...prev,
+            parent_consent: !!resp.profile.parent_consent,
+            parent_name: resp.profile.parent_name || '',
+            parent_email: resp.profile.parent_email || '',
           }));
         }
       } catch (e) {

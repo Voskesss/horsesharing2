@@ -116,11 +116,6 @@ class RiderProfile(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    # Guardian consent (for minors)
-    parent_consent = Column(Boolean, nullable=True)
-    parent_name = Column(String(255), nullable=True)
-    parent_email = Column(String(255), nullable=True)
-    parent_consent_timestamp = Column(DateTime, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="rider_profile")
@@ -179,6 +174,11 @@ class OwnerProfile(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Guardian consent (for minors, owner context)
+    parent_consent = Column(Boolean, nullable=True)
+    parent_name = Column(String(255), nullable=True)
+    parent_email = Column(String(255), nullable=True)
+    parent_consent_timestamp = Column(DateTime, nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="owner_profile")

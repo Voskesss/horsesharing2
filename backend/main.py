@@ -439,6 +439,20 @@ async def get_owner_profile(
             },
             "profile": {}
         }
+    # Compute age and minor flag for convenience
+    computed_age = None
+    computed_is_minor = None
+    try:
+        if owner.date_of_birth:
+            from datetime import date as _date
+            dob = owner.date_of_birth
+            today = _date.today()
+            computed_age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            computed_is_minor = (computed_age is not None) and (computed_age < 18)
+    except Exception:
+        computed_age = None
+        computed_is_minor = None
+
     return {
         "exists": True,
         "user": {
@@ -463,6 +477,8 @@ async def get_owner_profile(
             "available_days": owner.available_days or {},
             "duration": owner.duration,
             "date_of_birth": owner.date_of_birth.isoformat() if owner.date_of_birth else None,
+            "age": computed_age,
+            "is_minor": computed_is_minor,
             "parent_consent": owner.parent_consent,
             "parent_name": owner.parent_name,
             "parent_email": owner.parent_email,
@@ -513,6 +529,9 @@ async def create_or_update_owner_profile(
         owner.geocode_confidence = float(payload.geocode_confidence)
     if hasattr(payload, 'needs_review') and payload.needs_review is not None:
         owner.needs_review = bool(payload.needs_review)
+    # Enforce required date_of_birth
+    if payload.date_of_birth is None or str(payload.date_of_birth).strip() == "":
+        raise HTTPException(status_code=422, detail="Geboortedatum is verplicht")
     if hasattr(payload, 'date_of_birth') and payload.date_of_birth is not None:
         try:
             # Accept YYYY-MM-DD
