@@ -221,6 +221,8 @@ class HorsePayload(BaseModel):
     age: Optional[int] = None
     gender: Optional[str] = None
     breed: Optional[str] = None
+    photos: Optional[list] = None
+    video_intro_url: Optional[str] = None
     disciplines: Optional[dict] = None   # simple dict or list mapping
     max_jump_height: Optional[int] = None
     temperament: Optional[list] = None
@@ -442,14 +444,25 @@ async def list_owner_horses(
                 "age": h.age,
                 "gender": h.gender,
                 "breed": h.breed,
+                "photos": h.photos or [],
+                "video": h.video,
                 "disciplines": h.disciplines or {},
                 "max_jump_height": h.max_jump_height,
                 "level": h.level,
+                "coat_colors": h.coat_colors or [],
+                "temperament": h.temperament or [],
                 "required_tasks": h.required_tasks or [],
                 "optional_tasks": h.optional_tasks or [],
                 "task_frequency": h.task_frequency,
                 "available_days": h.available_days or {},
                 "min_days_per_week": h.min_days_per_week,
+                "session_duration_min": h.session_duration_min,
+                "session_duration_max": h.session_duration_max,
+                "comfort_flags": h.comfort_flags or {},
+                "activity_mode": h.activity_mode,
+                "cost_model": h.cost_model,
+                "cost_amount": h.cost_amount,
+                "rules": h.rules or {},
                 "no_gos": (json.loads(h.no_gos) if isinstance(h.no_gos, str) and h.no_gos else []),
                 "is_available": h.is_available,
             } for h in horses
@@ -573,6 +586,10 @@ async def create_or_update_horse(
         horse.coat_colors = payload.coat_colors
     if payload.temperament is not None:
         horse.temperament = payload.temperament
+    if payload.photos is not None:
+        horse.photos = payload.photos
+    if payload.video_intro_url is not None:
+        horse.video = payload.video_intro_url
     if payload.required_tasks is not None:
         horse.required_tasks = payload.required_tasks
     if payload.optional_tasks is not None:

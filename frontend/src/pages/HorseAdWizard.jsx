@@ -108,11 +108,37 @@ export default function HorseAdWizard() {
     }
     if (basic.name) payload.name = basic.name;
     if (basic.type) payload.type = basic.type;
+    if (basic.gender) payload.gender = basic.gender;
+    if (basic.age !== '' && basic.age != null) payload.age = Number(basic.age);
+    if (basic.height !== '' && basic.height != null) payload.height = Number(basic.height);
+    if (basic.breed) payload.breed = basic.breed;
+    if (basic.description) payload.description = basic.description;
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
     // Beschikbaarheid minimaal meesturen als er iets is gekozen
     if (Object.values(availability.available_days || {}).some(arr => Array.isArray(arr) && arr.length)) {
       payload.available_days = availability.available_days;
     }
+    if (availability.session_duration_min !== '' && availability.session_duration_min != null) payload.session_duration_min = Number(availability.session_duration_min);
+    if (availability.session_duration_max !== '' && availability.session_duration_max != null) payload.session_duration_max = Number(availability.session_duration_max);
+    if (availability.min_days_per_week != null) payload.min_days_per_week = availability.min_days_per_week;
+    if (availability.task_frequency) payload.task_frequency = availability.task_frequency;
+    // Kosten
+    if (cost.cost_model) payload.cost_model = cost.cost_model;
+    if (cost.cost_amount !== '' && cost.cost_amount != null) payload.cost_amount = Number(cost.cost_amount);
+    // Filters
+    if (Array.isArray(filters.disciplines) && filters.disciplines.length) payload.disciplines = filters.disciplines;
+    if (Array.isArray(filters.temperament) && filters.temperament.length) payload.temperament = filters.temperament;
+    if (Array.isArray(filters.coat_colors) && filters.coat_colors.length) payload.coat_colors = filters.coat_colors;
+    if (filters.level) payload.level = filters.level;
+    if (filters.max_jump_height !== '' && filters.max_jump_height != null) payload.max_jump_height = Number(filters.max_jump_height);
+    if (filters.comfort_flags && Object.keys(filters.comfort_flags).length) payload.comfort_flags = filters.comfort_flags;
+    if (filters.activity_mode) payload.activity_mode = filters.activity_mode;
+    // Expectations
+    if (Array.isArray(expectations.required_tasks) && expectations.required_tasks.length) payload.required_tasks = expectations.required_tasks;
+    if (Array.isArray(expectations.optional_tasks) && expectations.optional_tasks.length) payload.optional_tasks = expectations.optional_tasks;
+    if (Array.isArray(expectations.required_skills) && expectations.required_skills.length) payload.required_skills = expectations.required_skills;
+    if (Array.isArray(expectations.desired_rider_personality) && expectations.desired_rider_personality.length) payload.desired_rider_personality = expectations.desired_rider_personality;
+    if (expectations.rules && Object.keys(expectations.rules).length) payload.rules = expectations.rules;
     // Guard: niets ingevuld -> skip
     if (Object.keys(payload).length === 0) return;
     try {
@@ -173,11 +199,22 @@ export default function HorseAdWizard() {
           disciplines: Array.isArray(h.disciplines) ? h.disciplines : prev.disciplines,
           level: h.level || prev.level,
           max_jump_height: h.max_jump_height ?? prev.max_jump_height,
+          temperament: Array.isArray(h.temperament) ? h.temperament : prev.temperament,
+          coat_colors: Array.isArray(h.coat_colors) ? h.coat_colors : prev.coat_colors,
+          comfort_flags: (h.comfort_flags && typeof h.comfort_flags==='object') ? h.comfort_flags : prev.comfort_flags,
+          activity_mode: h.activity_mode || prev.activity_mode,
         }));
         setExpectations(prev => ({
           ...prev,
           required_tasks: Array.isArray(h.required_tasks) ? h.required_tasks : prev.required_tasks,
           optional_tasks: Array.isArray(h.optional_tasks) ? h.optional_tasks : prev.optional_tasks,
+          // keep required_skills/personality if present later
+        }));
+        // Prefill costs
+        setCost(prev => ({
+          ...prev,
+          cost_model: h.cost_model || prev.cost_model,
+          cost_amount: (h.cost_amount != null ? String(h.cost_amount) : prev.cost_amount),
         }));
       } catch (e) {
         console.warn('Prefill horses failed', e);
