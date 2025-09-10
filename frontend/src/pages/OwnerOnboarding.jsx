@@ -176,7 +176,7 @@ const OwnerOnboarding = () => {
         parent_email: isMinor ? guardian.parent_email : null,
         visible_radius: 10,
       });
-      navigate('/owner/horses/new');
+      navigate('/dashboard');
     } catch (e) {
       alert(`Opslaan mislukt: ${e.message}`);
     }
@@ -411,7 +411,7 @@ const OwnerOnboarding = () => {
               disabled={!isFormValid}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFormValid ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
-              Opslaan & Paard toevoegen
+              Opslaan
             </button>
           </div>
         </div>
