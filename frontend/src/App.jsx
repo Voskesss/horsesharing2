@@ -11,6 +11,7 @@ import HorseAdWizard from './pages/HorseAdWizard';
 import Dashboard from './pages/Dashboard';
 import OwnerProfile from './pages/OwnerProfile';
 import OwnerHorses from './pages/OwnerHorses';
+import AdDetail from './pages/AdDetail';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
             <Route path="/owner/horses" element={<OwnerHorses />} />
             <Route path="/owner/profile" element={<OwnerProfile />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/ads/:id" element={<AdDetail />} />
           </Routes>
         </div>
       </Router>

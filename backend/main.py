@@ -372,6 +372,7 @@ class HorsePayload(BaseModel):
     photos: Optional[list] = None
     video_intro_url: Optional[str] = None
     video: Optional[str] = None
+    videos: Optional[list] = None
     disciplines: Optional[dict] = None   # simple dict or list mapping
     max_jump_height: Optional[int] = None
     temperament: Optional[list] = None
@@ -704,6 +705,7 @@ async def list_owner_horses(
                 "photos": h.photos or [],
                 "video": h.video,
                 "video_intro_url": h.video,  # compat
+                "videos": (h.videos if h.videos is not None else ([h.video] if h.video else [])),
                 "disciplines": h.disciplines or {},
                 "max_jump_height": h.max_jump_height,
                 "level": h.level,
@@ -744,6 +746,87 @@ async def list_owner_horses(
             } for h in horses
         ]
     }
+
+@app.get("/ads/{horse_id}")
+async def get_ad_detail(
+    horse_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Public-ish ad read: visible if published, or always for the owner."""
+    # Find horse by id
+    h = db.query(HorseProfile).filter(HorseProfile.id == horse_id).first()
+    if not h:
+        raise HTTPException(status_code=404, detail="Ad not found")
+
+    # Determine if current user is owner
+    is_owner = False
+    try:
+        if h.owner_profile and h.owner_profile.user_id == current_user.id:
+            is_owner = True
+    except Exception:
+        is_owner = False
+
+    # Gate: must be available unless owner
+    if not is_owner and not bool(h.is_available):
+        raise HTTPException(status_code=403, detail="Ad not available")
+
+    # Shape like list_owner_horses item
+    item = {
+        "id": h.id,
+        "title": h.title,
+        "description": h.description,
+        "ad_type": h.ad_type,
+        "ad_types": h.ad_types or [],
+        "name": h.name,
+        "type": h.type,
+        "height": h.height,
+        "age": h.age,
+        "gender": h.gender,
+        "breed": h.breed,
+        "photos": h.photos or [],
+        "video": h.video,
+        "video_intro_url": h.video,  # compat
+        "videos": (h.videos if h.videos is not None else ([h.video] if h.video else [])),
+        "disciplines": h.disciplines or {},
+        "max_jump_height": h.max_jump_height,
+        "level": h.level,
+        "coat_colors": h.coat_colors or [],
+        "temperament": h.temperament or [],
+        "required_tasks": h.required_tasks or [],
+        "optional_tasks": h.optional_tasks or [],
+        "task_frequency": h.task_frequency,
+        "available_days": h.available_days or {},
+        "min_days_per_week": h.min_days_per_week,
+        "session_duration_min": h.session_duration_min,
+        "session_duration_max": h.session_duration_max,
+        "comfort_flags": h.comfort_flags or {},
+        "activity_mode": h.activity_mode,
+        "cost_model": h.cost_model,
+        "cost_amount": h.cost_amount,
+        "rules": h.rules or {},
+        "no_gos": (json.loads(h.no_gos) if isinstance(h.no_gos, str) and h.no_gos else []),
+        "is_available": h.is_available,
+        # Stable address
+        "stable_country_code": h.stable_country_code,
+        "stable_postcode": h.stable_postcode,
+        "stable_house_number": h.stable_house_number if is_owner else None,  # privacy
+        "stable_house_number_addition": h.stable_house_number_addition if is_owner else None,
+        "stable_street": h.stable_street,
+        "stable_city": h.stable_city,
+        "stable_lat": h.stable_lat,
+        "stable_lon": h.stable_lon,
+        "stable_geocode_confidence": h.stable_geocode_confidence,
+        "stable_needs_review": h.stable_needs_review,
+        # Facilities
+        "indoor_arena": h.indoor_arena,
+        "outdoor_arena": h.outdoor_arena,
+        "longe_circle": h.longe_circle,
+        "horse_walker": h.horse_walker,
+        "toilet_available": h.toilet_available,
+        "locker_available": h.locker_available,
+    }
+    return item
 
 @app.post("/media/upload")
 async def upload_media(
@@ -896,6 +979,11 @@ async def create_or_update_horse(
         horse.temperament = payload.temperament
     if payload.photos is not None:
         horse.photos = payload.photos
+    if payload.videos is not None:
+        # persist array and keep first as legacy field for compatibility
+        horse.videos = payload.videos
+        if isinstance(payload.videos, list) and payload.videos:
+            horse.video = payload.videos[0]
     if payload.video_intro_url is not None:
         horse.video = payload.video_intro_url
     if payload.video is not None:

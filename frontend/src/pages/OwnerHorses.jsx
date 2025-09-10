@@ -109,6 +109,7 @@ const OwnerHorses = () => {
                     )}
                   </div>
                   <div className="mt-4 flex gap-3 flex-wrap">
+                    <button onClick={() => navigate(`/ads/${h.id}`)} className="px-3 py-1.5 text-sm rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200">Bekijken</button>
                     <button onClick={() => navigate(`/owner/horses/${h.id}/edit`)} className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Bewerken</button>
                     {h.is_available ? (
                       <button onClick={() => setPublished(h.id, false)} className="px-3 py-1.5 text-sm rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300">Naar concept</button>
