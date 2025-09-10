@@ -403,6 +403,13 @@ class HorsePayload(BaseModel):
     stable_lon: Optional[float] = None
     stable_geocode_confidence: Optional[float] = None
     stable_needs_review: Optional[bool] = None
+    # Stable facilities
+    indoor_arena: Optional[bool] = None
+    outdoor_arena: Optional[bool] = None
+    longe_circle: Optional[bool] = None
+    horse_walker: Optional[bool] = None
+    toilet_available: Optional[bool] = None
+    locker_available: Optional[bool] = None
 
 @app.get("/owner-profile")
 async def get_owner_profile(
@@ -724,6 +731,13 @@ async def list_owner_horses(
                 "stable_lon": h.stable_lon,
                 "stable_geocode_confidence": h.stable_geocode_confidence,
                 "stable_needs_review": h.stable_needs_review,
+                # Stable facilities
+                "indoor_arena": h.indoor_arena,
+                "outdoor_arena": h.outdoor_arena,
+                "longe_circle": h.longe_circle,
+                "horse_walker": h.horse_walker,
+                "toilet_available": h.toilet_available,
+                "locker_available": h.locker_available,
             } for h in horses
         ]
     }
@@ -937,6 +951,19 @@ async def create_or_update_horse(
             pass
     if payload.stable_needs_review is not None:
         horse.stable_needs_review = bool(payload.stable_needs_review)
+    # Facilities flags
+    if payload.indoor_arena is not None:
+        horse.indoor_arena = bool(payload.indoor_arena)
+    if payload.outdoor_arena is not None:
+        horse.outdoor_arena = bool(payload.outdoor_arena)
+    if payload.longe_circle is not None:
+        horse.longe_circle = bool(payload.longe_circle)
+    if payload.horse_walker is not None:
+        horse.horse_walker = bool(payload.horse_walker)
+    if payload.toilet_available is not None:
+        horse.toilet_available = bool(payload.toilet_available)
+    if payload.locker_available is not None:
+        horse.locker_available = bool(payload.locker_available)
 
     db.commit()
     db.refresh(horse)

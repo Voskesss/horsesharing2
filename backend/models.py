@@ -290,6 +290,11 @@ class HorseProfile(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Stable facilities
+    horse_walker = Column(Boolean, default=False)
+    toilet_available = Column(Boolean, default=False)
+    locker_available = Column(Boolean, default=False)
+
     # Relationships
     owner_profile = relationship("OwnerProfile", back_populates="horse_profiles")
     matches = relationship("Match", back_populates="horse_profile")

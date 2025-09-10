@@ -57,8 +57,7 @@ export default function HorseAdWizard() {
     geocode_confidence: null,
     needs_review: null,
   });
-  const [localFiles, setLocalFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  // no local file state needed; ImageUploader manages value via props
 
   // Stap 2: Beschikbaarheid
   const [availability, setAvailability] = useState({
@@ -94,6 +93,15 @@ export default function HorseAdWizard() {
     max_jump_height: '',
     comfort_flags: { traffic: false, outdoor_solo: false, with_other_horses: false },
     activity_mode: 'ride_or_care',
+  });
+  // Stal faciliteiten
+  const [facilities, setFacilities] = useState({
+    indoor_arena: false,
+    outdoor_arena: false,
+    longe_circle: false,
+    horse_walker: false,
+    toilet_available: false,
+    locker_available: false,
   });
 
   // Stap 5: Verwachtingen & eisen
@@ -141,6 +149,8 @@ export default function HorseAdWizard() {
     if (basic.breed) payload.breed = basic.breed;
     if (basic.description) payload.description = basic.description;
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
+    // Faciliteiten
+    Object.entries(facilities).forEach(([k,v])=>{ if (v) payload[k] = true; });
     // Staladres meenemen wanneer postcode + huisnummer is ingevuld of straat/stad handmatig
     const hasAddrCore = (stableAddress.postcode && stableAddress.house_number) || (stableAddress.street || stableAddress.city);
     if (hasAddrCore) {
@@ -267,6 +277,15 @@ export default function HorseAdWizard() {
           geocode_confidence: h.stable_geocode_confidence ?? null,
           needs_review: h.stable_needs_review ?? null,
         });
+        // Prefill facilities
+        setFacilities({
+          indoor_arena: !!h.indoor_arena,
+          outdoor_arena: !!h.outdoor_arena,
+          longe_circle: !!h.longe_circle,
+          horse_walker: !!h.horse_walker,
+          toilet_available: !!h.toilet_available,
+          locker_available: !!h.locker_available,
+        });
       } catch (e) {
         console.warn('Prefill horse by id failed', e);
       }
@@ -302,6 +321,9 @@ export default function HorseAdWizard() {
     if (basic.breed) payload.breed = basic.breed;
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
     if (basic.video_intro_url) payload.video_intro_url = basic.video_intro_url;
+
+    // Faciliteiten
+    Object.entries(facilities).forEach(([k,v])=>{ if (v) payload[k] = true; });
 
     // Staladres meenemen (zelfde logic als autosave)
     const hasAddrCore2 = (stableAddress.postcode && stableAddress.house_number) || (stableAddress.street || stableAddress.city);
@@ -382,38 +404,49 @@ export default function HorseAdWizard() {
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                 <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
-                Titel, Verhaal & Basis
+                Advertentie informatie
               </h2>
-              <div className="p-4 border rounded-lg bg-gray-50">
-                <div className="font-medium text-gray-900 mb-2">Locatie van het paard (staladres)</div>
-                <AddressPicker value={stableAddress} onChange={setStableAddress} apiBase={import.meta.env.VITE_API_BASE || 'http://localhost:8000'} />
-              </div>
+              {/* Advertentietype */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Titel *</label>
-                <input type="text" value={basic.title} onChange={(e)=>setBasic({...basic, title: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Verhaal / beschrijving</label>
-                <textarea value={basic.description} onChange={(e)=>setBasic({...basic, description: e.target.value})} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Advertentietype (meerdere mogelijk)</label>
-                <div className="flex gap-3 flex-wrap">
-                  {['bijrijden','verzorgen','lease'].map(t => {
-                    const selected = basic.ad_types.includes(t);
+                <label className="block text-sm font-medium text-gray-700 mb-2">De reden dat ik deze advertentie plaats is dat ik…</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'bijrijden', label: 'bijrijder' },
+                    { key: 'verzorgen', label: 'verzorger' },
+                    { key: 'lease', label: 'leaser' },
+                  ].map(opt => {
+                    const selected = (basic.ad_types || []).includes(opt.key);
                     return (
-                      <button key={t} type="button" onClick={()=>{
-                        const has = basic.ad_types.includes(t);
-                        const next = has ? basic.ad_types.filter(x=>x!==t) : [...basic.ad_types, t];
-                        setBasic({...basic, ad_types: next});
-                      }}
-                        className={`px-4 py-2 rounded-full border ${selected ? 'bg-emerald-100 border-emerald-500 text-emerald-700':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => {
+                          const has = (basic.ad_types || []).includes(opt.key);
+                          const next = has
+                            ? (basic.ad_types || []).filter(x => x !== opt.key)
+                            : ([...(basic.ad_types || []), opt.key]);
+                          setBasic({ ...basic, ad_types: next });
+                        }}
+                        className={`px-3 py-1 rounded-full border text-sm ${selected ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        {`een ${opt.label} zoek`}
+                      </button>
                     );
                   })}
                 </div>
+                <div className="text-xs text-gray-500 mt-1">voor mijn {basic.type==='pony' ? 'pony' : 'paard'}</div>
               </div>
+              {/* Titel */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Verzin een mooie, duidelijke en pakkende titel voor jouw paard *</label>
+                <input type="text" placeholder="Bijv. Lieve allround merrie zoekt rustige bijrijder (Velp)" value={basic.title} onChange={(e)=>setBasic({...basic, title: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+              </div>
+              {/* Advertentietekst */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Advertentietekst</label>
+                <textarea placeholder={"Vertel iets over je paard, wat je zoekt en wanneer. Bijv.: Bella is een rustige merrie van 1.58m. Ik zoek een geduldige bijrijder voor 2 dagen p/w, doordeweeks in de avond. Binnen- en buitenbak aanwezig. Omgeving Velp."} value={basic.description} onChange={(e)=>setBasic({...basic, description: e.target.value})} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+              </div>
+              {/* Basisgegevens */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Naam</label>
@@ -427,7 +460,6 @@ export default function HorseAdWizard() {
                   </select>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Geslacht</label>
@@ -447,12 +479,32 @@ export default function HorseAdWizard() {
                   <input type="number" value={basic.height} onChange={(e)=>setBasic({...basic, height: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ras</label>
                 <input type="text" value={basic.breed} onChange={(e)=>setBasic({...basic, breed: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
               </div>
-
+              {/* Staladres (als derde van onderen) */}
+              <div className="p-4 border rounded-lg bg-gray-50">
+                <div className="font-medium text-gray-900 mb-2">Locatie van het paard (staladres)</div>
+                <AddressPicker value={stableAddress} onChange={setStableAddress} apiBase={import.meta.env.VITE_API_BASE || 'http://localhost:8000'} />
+              </div>
+              {/* Stalfaciliteiten (onder staladres) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stalfaciliteiten</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    {key:'indoor_arena', label:'Binnenbak'},
+                    {key:'outdoor_arena', label:'Buitenbak'},
+                    {key:'longe_circle', label:'Longeercirkel'},
+                    {key:'horse_walker', label:'Molen'},
+                    {key:'toilet_available', label:'Toilet'},
+                    {key:'locker_available', label:'Zadel-/locker-kast'},
+                  ].map(it => (
+                    <button key={it.key} type="button" onClick={()=> setFacilities(prev=> ({...prev, [it.key]: !prev[it.key]}))} className={`px-3 py-1 rounded-full border text-sm ${facilities[it.key] ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{it.label}</button>
+                  ))}
+                </div>
+              </div>
+              {/* Foto's + Video (laatste) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Foto's (max 5)</label>
@@ -465,7 +517,6 @@ export default function HorseAdWizard() {
               </div>
             </div>
           )}
-
           {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
