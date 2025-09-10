@@ -11,15 +11,20 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
   const handleFiles = useCallback(async (fileList) => {
     if (!fileList || remaining <= 0) return;
     const selected = Array.from(fileList).slice(0, remaining);
+    console.log('[ImageUploader] selected files:', selected.map(f => ({ name: f.name, size: f.size, type: f.type })));
     try {
       setBusy(true);
       // compress images client-side
       const compressed = await Promise.all(selected.map((f) => compressImage(f)));
+      console.log('[ImageUploader] compressed blobs:', compressed.map((b, i) => ({ i, size: b?.size })));
       const res = await api.media.uploadPhotos(compressed);
+      console.log('[ImageUploader] upload response:', res);
       const urls = Array.isArray(res.urls) ? res.urls : [];
       onChange([...(value || []), ...urls].slice(0, max));
     } catch (e) {
-      alert(`Upload mislukt: ${e.message}`);
+      console.error('[ImageUploader] upload error:', e);
+      const msg = (e && e.message) ? e.message : String(e || 'Onbekende fout');
+      alert(`Upload mislukt: ${msg}`);
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -67,7 +72,7 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
             {busy ? 'Uploaden...' : `Kies bestanden (${remaining} over)`}
           </button>
         </div>
-        <input ref={inputRef} type="file" accept="image/*" multiple onChange={onSelect} hidden />
+        <input ref={inputRef} type="file" accept="image/*" onChange={onSelect} hidden />
         <div className="mt-2 text-xs text-gray-500">Max {max} afbeeldingen. We comprimeren automatisch voor snelle uploads.</div>
       </div>
 

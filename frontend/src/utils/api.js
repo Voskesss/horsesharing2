@@ -89,6 +89,31 @@ export const createAPI = (getToken) => ({
     },
   },
 
+  // Media uploads (images)
+  media: {
+    async uploadPhotos(files) {
+      const token = await getToken();
+      const fd = new FormData();
+      (files || []).forEach((f, idx) => {
+        const name = f?.name || `upload_${idx}.jpg`;
+        fd.append('files', f, name);
+      });
+      const resp = await fetch(`${API_BASE_URL}/media/upload`, {
+        method: 'POST',
+        headers: {
+          // Laat browser zelf multipart boundary zetten; geen Content-Type hier
+          'Authorization': `Bearer ${token}`,
+        },
+        body: fd,
+      });
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => 'Upload failed');
+        throw new Error(text || `HTTP ${resp.status}`);
+      }
+      return resp.json();
+    }
+  },
+
   // User API calls
   user: {
     // Haal huidige user info op

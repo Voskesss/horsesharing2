@@ -46,6 +46,11 @@ Gebruik dit bestand als centrale to‑do lijst. Vink items af en voeg taken toe 
 - [ ] E2E smoke (wizard flow happy path)
 - [ ] ESLint/Prettier config + CI hooks
 
+## Moderatie & Veiligheid
+- [ ] Rapportageknop bij advertenties (foto/tekst) → UI: 'Rapporteer' + modal met reden
+- [ ] Backend endpoint: `POST /abuse/report` + rate limiting + audit logging
+- [ ] (Optioneel, via env-flag) Azure Content Safety voor afbeeldingen/tekst; alleen activeren in prod
+
 ## Notities
 - Kinde auth blijft leidend; API calls via `createAPI` met bearer token.
 - Payload‑gedreven updates altijd prefereren om per veld te kunnen saven.
@@ -55,3 +60,4 @@ Gebruik dit bestand als centrale to‑do lijst. Vink items af en voeg taken toe 
 - Review van vorige paardeigenaren waar bijridjer is geweets vragen om review 
 - aanvullen op riderprofiel : al eerder bijridejr geweest, zo ja, wat voor een paard, voor hoe lang, heb je wedstridejn gerden, welk niveau etc. 
 - Evt een kart waarop men kan zien in de omeving. 
+- melding maken bij vreemd profielen

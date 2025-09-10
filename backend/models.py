@@ -179,6 +179,8 @@ class OwnerProfile(Base):
     parent_name = Column(String(255), nullable=True)
     parent_email = Column(String(255), nullable=True)
     parent_consent_timestamp = Column(DateTime, nullable=True)
+    # Profile photo
+    photo_url = Column(String(500), nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="owner_profile")

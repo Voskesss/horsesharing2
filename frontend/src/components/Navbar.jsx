@@ -45,25 +45,27 @@ const Navbar = () => {
           <div className="flex items-center space-x-6">
             {isAuthenticated ? (
               <>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
-                      {(me?.name?.charAt(0)) || user?.email?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                  <span className="text-gray-700 font-medium">
+                <Link to="/owner/profile" className="flex items-center space-x-3 group">
+                  {me?.owner_photo_url ? (
+                    <img src={me.owner_photo_url} alt="profiel" className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-200 group-hover:ring-emerald-400" />
+                  ) : (
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-full flex items-center justify-center">
+                      <span className="text-white font-semibold text-sm">
+                        {(me?.name?.charAt(0)) || user?.email?.charAt(0) || 'U'}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-gray-700 font-medium group-hover:text-emerald-700">
                     {meLoaded ? (
-                      // Gebruik DB-naam uit /auth/me, toon voornaam (eerste deel)
                       (() => {
                         const first = (me?.name || '').split(' ')[0] || (me?.name || '');
                         return `Welkom, ${first}`;
                       })()
                     ) : (
-                      // nog niet geladen: geen flicker met SDK-naam
                       'Welkom'
                     )}
                   </span>
-                </div>
+                </Link>
                 <button
                   onClick={logout}
                   className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"

@@ -205,6 +205,7 @@ async def get_me(request: Request, current_user: User = Depends(get_current_user
         "email": current_user.email,
         "name": current_user.name,
         "phone": current_user.phone,
+        "owner_photo_url": (current_user.owner_profile.photo_url if current_user.owner_profile else None),
         # Extra: wat Kinde zelf zegt (leading)
         "kinde_given_name": given,
         "kinde_family_name": family,
@@ -353,6 +354,8 @@ class OwnerProfilePayload(BaseModel):
     parent_consent: Optional[bool] = None
     parent_name: Optional[str] = None
     parent_email: Optional[str] = None
+    # Profile photo
+    photo_url: Optional[str] = None
 
 class HorsePayload(BaseModel):
     id: Optional[int] = None  # when provided -> update
@@ -482,6 +485,7 @@ async def get_owner_profile(
             "parent_consent": owner.parent_consent,
             "parent_name": owner.parent_name,
             "parent_email": owner.parent_email,
+            "photo_url": owner.photo_url,
         }
     }
 
@@ -529,6 +533,13 @@ async def create_or_update_owner_profile(
         owner.geocode_confidence = float(payload.geocode_confidence)
     if hasattr(payload, 'needs_review') and payload.needs_review is not None:
         owner.needs_review = bool(payload.needs_review)
+    # photo_url: ook leegmaken toestaan (null vanuit frontend)
+    try:
+        if 'photo_url' in getattr(payload, '__fields_set__', set()):
+            owner.photo_url = payload.photo_url or None
+    except Exception:
+        if hasattr(payload, 'photo_url'):
+            owner.photo_url = payload.photo_url or None
     # Enforce required date_of_birth
     if payload.date_of_birth is None or str(payload.date_of_birth).strip() == "":
         raise HTTPException(status_code=422, detail="Geboortedatum is verplicht")
@@ -704,6 +715,20 @@ async def upload_media(
     """Uploads images either to Azure Blob Storage (if configured) or locally (/uploads)."""
     allowed_ext = [".jpg", ".jpeg", ".png", ".webp"]
     use_azure = os.getenv("AZURE_STORAGE_CONNECTION_STRING") and os.getenv("AZURE_CONTAINER") and AZURE_AVAILABLE
+    try:
+        # Debug: log incoming request details
+        print(f"[upload_media] user_id={current_user.id} email={current_user.email}")
+        print(f"[upload_media] azure_enabled={bool(use_azure)}")
+        print(f"[upload_media] received_files_count={len(files) if files else 0}")
+        for idx, f in enumerate(files or []):
+            try:
+                name = f.filename or "(no-name)"
+                ext = os.path.splitext(name)[1].lower()
+                print(f"[upload_media] file[{idx}] name={name} ext={ext} content_type={getattr(f, 'content_type', None)}")
+            except Exception as _e:
+                print(f"[upload_media] file[{idx}] meta read error: {_e}")
+    except Exception as e:
+        print(f"[upload_media] pre-log error: {e}")
 
     urls: List[str] = []
     if use_azure:
@@ -717,10 +742,12 @@ async def upload_media(
                 filename = f.filename or "upload"
                 ext = os.path.splitext(filename)[1].lower()
                 if ext not in allowed_ext:
+                    print(f"[upload_media] skip disallowed ext (azure) name={filename} ext={ext}")
                     continue
                 blob_name = f"{uuid.uuid4().hex}{ext}"
                 blob_client = container_client.get_blob_client(blob_name)
                 data = await f.read()
+                print(f"[upload_media] azure upload name={filename} -> blob={blob_name} size={len(data)}")
                 content_type = "image/png" if ext == ".png" else ("image/webp" if ext == ".webp" else "image/jpeg")
                 blob_client.upload_blob(data, overwrite=True, content_settings=ContentSettings(content_type=content_type))
                 if public_base:
@@ -740,17 +767,18 @@ async def upload_media(
         filename = f.filename or "upload"
         ext = os.path.splitext(filename)[1].lower()
         if ext not in allowed_ext:
+            print(f"[upload_media] skip disallowed ext (local) name={filename} ext={ext}")
             continue
         unique = f"{uuid.uuid4().hex}{ext}"
         dest_path = os.path.join(UPLOAD_ROOT, unique)
+        data = await f.read()
+        print(f"[upload_media] local save name={filename} -> {dest_path} size={len(data)}")
         with open(dest_path, "wb") as out:
-            out.write(await f.read())
+            out.write(data)
         saved_files.append(unique)
     base = str(request.base_url).rstrip('/')
     urls = [f"{base}/uploads/{name}" for name in saved_files]
     return {"urls": urls}
-
-@app.post("/owner/horses")
 async def create_or_update_horse(
     payload: HorsePayload,
     current_user: User = Depends(get_current_user),

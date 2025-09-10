@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
 import AddressPicker from '../components/AddressPicker';
+import ImageUploader from '../components/ImageUploader';
 
 const OwnerOnboarding = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const OwnerOnboarding = () => {
   const [errors, setErrors] = useState({});
   const [serverMinor, setServerMinor] = useState(null);
   const [prefillDob, setPrefillDob] = useState('');
+  const [photoUrls, setPhotoUrls] = useState([]); // single photo via ImageUploader (max=1)
 
   const calcAge = (dobStr) => {
     if (!dobStr) return null;
@@ -103,6 +105,9 @@ const OwnerOnboarding = () => {
             geocode_confidence: resp.profile.geocode_confidence ?? null,
             needs_review: resp.profile.needs_review ?? null,
           }));
+          if (resp.profile.photo_url) {
+            setPhotoUrls([resp.profile.photo_url]);
+          }
           // Prefill guardian fields if present
           setGuardian(prev => ({
             ...prev,
@@ -152,6 +157,7 @@ const OwnerOnboarding = () => {
         first_name: basicInfo.first_name,
         last_name: basicInfo.last_name,
         phone: basicInfo.phone,
+        photo_url: (photoUrls[0] || null),
         // address fields
         country_code: address.country_code || 'NL',
         postcode: address.postcode,
@@ -206,11 +212,13 @@ const OwnerOnboarding = () => {
           {/* Stap 1: NAW */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
-                Basisgegevens (NAW)
-              </h2>
-              
+              {/* Profielfoto */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Profielfoto</label>
+                <ImageUploader value={photoUrls} onChange={setPhotoUrls} api={api} max={1} />
+                <p className="mt-1 text-xs text-gray-500">Kies een duidelijke foto. Alleen jpg/png/webp; we comprimeren automatisch.</p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Voornaam <span className="text-red-600">*</span></label>
