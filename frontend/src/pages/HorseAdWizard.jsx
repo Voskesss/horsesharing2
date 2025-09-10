@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
 import ImageUploader from '../components/ImageUploader';
+import AddressPicker from '../components/AddressPicker';
 
 const defaultSchedule = () => ({
   maandag: [],
@@ -42,6 +43,19 @@ export default function HorseAdWizard() {
     breed: '',
     photos: [],
     video_intro_url: '',
+  });
+  // Staladres (paardlocatie)
+  const [stableAddress, setStableAddress] = useState({
+    country_code: 'NL',
+    postcode: '',
+    house_number: '',
+    house_number_addition: '',
+    street: '',
+    city: '',
+    lat: null,
+    lon: null,
+    geocode_confidence: null,
+    needs_review: null,
   });
   const [localFiles, setLocalFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -127,6 +141,20 @@ export default function HorseAdWizard() {
     if (basic.breed) payload.breed = basic.breed;
     if (basic.description) payload.description = basic.description;
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
+    // Staladres meenemen wanneer postcode + huisnummer is ingevuld of straat/stad handmatig
+    const hasAddrCore = (stableAddress.postcode && stableAddress.house_number) || (stableAddress.street || stableAddress.city);
+    if (hasAddrCore) {
+      payload.stable_country_code = stableAddress.country_code || 'NL';
+      payload.stable_postcode = stableAddress.postcode || '';
+      payload.stable_house_number = stableAddress.house_number || '';
+      payload.stable_house_number_addition = stableAddress.house_number_addition || '';
+      payload.stable_street = stableAddress.street || '';
+      payload.stable_city = stableAddress.city || '';
+      if (stableAddress.lat != null) payload.stable_lat = stableAddress.lat;
+      if (stableAddress.lon != null) payload.stable_lon = stableAddress.lon;
+      if (stableAddress.geocode_confidence != null) payload.stable_geocode_confidence = stableAddress.geocode_confidence;
+      if (stableAddress.needs_review != null) payload.stable_needs_review = stableAddress.needs_review;
+    }
     // Beschikbaarheid minimaal meesturen als er iets is gekozen
     if (Object.values(availability.available_days || {}).some(arr => Array.isArray(arr) && arr.length)) {
       payload.available_days = availability.available_days;
@@ -226,6 +254,19 @@ export default function HorseAdWizard() {
           cost_model: h.cost_model || prev.cost_model,
           cost_amount: (h.cost_amount != null ? String(h.cost_amount) : prev.cost_amount),
         }));
+        // Prefill stable address
+        setStableAddress({
+          country_code: h.stable_country_code || 'NL',
+          postcode: h.stable_postcode || '',
+          house_number: h.stable_house_number || '',
+          house_number_addition: h.stable_house_number_addition || '',
+          street: h.stable_street || '',
+          city: h.stable_city || '',
+          lat: h.stable_lat ?? null,
+          lon: h.stable_lon ?? null,
+          geocode_confidence: h.stable_geocode_confidence ?? null,
+          needs_review: h.stable_needs_review ?? null,
+        });
       } catch (e) {
         console.warn('Prefill horse by id failed', e);
       }
@@ -262,6 +303,20 @@ export default function HorseAdWizard() {
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
     if (basic.video_intro_url) payload.video_intro_url = basic.video_intro_url;
 
+    // Staladres meenemen (zelfde logic als autosave)
+    const hasAddrCore2 = (stableAddress.postcode && stableAddress.house_number) || (stableAddress.street || stableAddress.city);
+    if (hasAddrCore2) {
+      payload.stable_country_code = stableAddress.country_code || 'NL';
+      payload.stable_postcode = stableAddress.postcode || '';
+      payload.stable_house_number = stableAddress.house_number || '';
+      payload.stable_house_number_addition = stableAddress.house_number_addition || '';
+      payload.stable_street = stableAddress.street || '';
+      payload.stable_city = stableAddress.city || '';
+      if (stableAddress.lat != null) payload.stable_lat = stableAddress.lat;
+      if (stableAddress.lon != null) payload.stable_lon = stableAddress.lon;
+      if (stableAddress.geocode_confidence != null) payload.stable_geocode_confidence = stableAddress.geocode_confidence;
+      if (stableAddress.needs_review != null) payload.stable_needs_review = stableAddress.needs_review;
+    }
     // Beschikbaarheid
     payload.available_days = availability.available_days;
     if (availability.min_days_per_week != null) payload.min_days_per_week = availability.min_days_per_week;
@@ -329,6 +384,10 @@ export default function HorseAdWizard() {
                 <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
                 Titel, Verhaal & Basis
               </h2>
+              <div className="p-4 border rounded-lg bg-gray-50">
+                <div className="font-medium text-gray-900 mb-2">Locatie van het paard (staladres)</div>
+                <AddressPicker value={stableAddress} onChange={setStableAddress} apiBase={import.meta.env.VITE_API_BASE || 'http://localhost:8000'} />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Titel *</label>
                 <input type="text" value={basic.title} onChange={(e)=>setBasic({...basic, title: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />

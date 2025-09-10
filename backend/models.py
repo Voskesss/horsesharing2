@@ -275,6 +275,18 @@ class HorseProfile(Base):
     # No-gos
     no_gos = Column(Text, nullable=True)
     
+    # Stable location (horse-specific address)
+    stable_country_code = Column(String(2), nullable=True)
+    stable_postcode = Column(String(10), nullable=True)
+    stable_house_number = Column(String(10), nullable=True)
+    stable_house_number_addition = Column(String(20), nullable=True)
+    stable_street = Column(String(255), nullable=True)
+    stable_city = Column(String(100), nullable=True)
+    stable_lat = Column(Float, nullable=True)
+    stable_lon = Column(Float, nullable=True)
+    stable_geocode_confidence = Column(Float, nullable=True)
+    stable_needs_review = Column(Boolean, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

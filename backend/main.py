@@ -392,6 +392,17 @@ class HorsePayload(BaseModel):
     rules: Optional[dict] = None
     no_gos: Optional[list] = None
     is_available: Optional[bool] = None
+    # Stable address (horse location)
+    stable_country_code: Optional[str] = None
+    stable_postcode: Optional[str] = None
+    stable_house_number: Optional[str] = None
+    stable_house_number_addition: Optional[str] = None
+    stable_street: Optional[str] = None
+    stable_city: Optional[str] = None
+    stable_lat: Optional[float] = None
+    stable_lon: Optional[float] = None
+    stable_geocode_confidence: Optional[float] = None
+    stable_needs_review: Optional[bool] = None
 
 @app.get("/owner-profile")
 async def get_owner_profile(
@@ -702,6 +713,17 @@ async def list_owner_horses(
                 "rules": h.rules or {},
                 "no_gos": (json.loads(h.no_gos) if isinstance(h.no_gos, str) and h.no_gos else []),
                 "is_available": h.is_available,
+                # Stable address
+                "stable_country_code": h.stable_country_code,
+                "stable_postcode": h.stable_postcode,
+                "stable_house_number": h.stable_house_number,
+                "stable_house_number_addition": h.stable_house_number_addition,
+                "stable_street": h.stable_street,
+                "stable_city": h.stable_city,
+                "stable_lat": h.stable_lat,
+                "stable_lon": h.stable_lon,
+                "stable_geocode_confidence": h.stable_geocode_confidence,
+                "stable_needs_review": h.stable_needs_review,
             } for h in horses
         ]
     }
@@ -885,6 +907,36 @@ async def create_or_update_horse(
         horse.no_gos = json.dumps(payload.no_gos)
     if payload.is_available is not None:
         horse.is_available = bool(payload.is_available)
+    # Stable address
+    if payload.stable_country_code is not None:
+        horse.stable_country_code = (payload.stable_country_code or '').upper()[:2]
+    if payload.stable_postcode is not None:
+        horse.stable_postcode = payload.stable_postcode
+    if payload.stable_house_number is not None:
+        horse.stable_house_number = payload.stable_house_number
+    if payload.stable_house_number_addition is not None:
+        horse.stable_house_number_addition = payload.stable_house_number_addition
+    if payload.stable_street is not None:
+        horse.stable_street = payload.stable_street
+    if payload.stable_city is not None:
+        horse.stable_city = payload.stable_city
+    if payload.stable_lat is not None:
+        try:
+            horse.stable_lat = float(payload.stable_lat)
+        except Exception:
+            pass
+    if payload.stable_lon is not None:
+        try:
+            horse.stable_lon = float(payload.stable_lon)
+        except Exception:
+            pass
+    if payload.stable_geocode_confidence is not None:
+        try:
+            horse.stable_geocode_confidence = float(payload.stable_geocode_confidence)
+        except Exception:
+            pass
+    if payload.stable_needs_review is not None:
+        horse.stable_needs_review = bool(payload.stable_needs_review)
 
     db.commit()
     db.refresh(horse)
