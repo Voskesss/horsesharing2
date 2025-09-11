@@ -190,7 +190,7 @@ const OwnerOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-role-soft py-12 px-4">
+    <div className="min-h-screen bg-role-gradient py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-8">
           {/* Header */}
@@ -273,7 +273,8 @@ const OwnerOnboarding = () => {
                   type="date"
                   value={basicInfo.date_of_birth}
                   onChange={(e) => setBasicInfo({...basicInfo, date_of_birth: e.target.value})}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.date_of_birth ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${errors.date_of_birth ? 'border-red-400' : 'border-gray-300'}`}
+                  style={{ outlineColor: 'var(--role-primary)' }}
                 />
                 {errors.date_of_birth && <p className="mt-1 text-xs text-red-600">{errors.date_of_birth}</p>}
                 <p className="mt-1 text-xs text-gray-500">Onder 18? Dan vragen we toestemming van een ouder/voogd.</p>
@@ -290,12 +291,12 @@ const OwnerOnboarding = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Naam ouder/voogd <span className="text-red-600">*</span></label>
-                      <input type="text" value={guardian.parent_name} onChange={(e)=> setGuardian({...guardian, parent_name: e.target.value})} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.parent_name ? 'border-red-400' : 'border-gray-300'}`} />
+                      <input type="text" value={guardian.parent_name} onChange={(e)=> setGuardian({...guardian, parent_name: e.target.value})} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${errors.parent_name ? 'border-red-400' : 'border-gray-300'}`} style={{ outlineColor: 'var(--role-primary)' }} />
                       {errors.parent_name && <p className="mt-1 text-xs text-red-600">{errors.parent_name}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">E‑mail ouder/voogd <span className="text-red-600">*</span></label>
-                      <input type="email" value={guardian.parent_email} onChange={(e)=> setGuardian({...guardian, parent_email: e.target.value})} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.parent_email ? 'border-red-400' : 'border-gray-300'}`} />
+                      <input type="email" value={guardian.parent_email} onChange={(e)=> setGuardian({...guardian, parent_email: e.target.value})} className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${errors.parent_email ? 'border-red-400' : 'border-gray-300'}`} style={{ outlineColor: 'var(--role-primary)' }} />
                       {errors.parent_email && <p className="mt-1 text-xs text-red-600">{errors.parent_email}</p>}
                     </div>
                   </div>
@@ -311,7 +312,7 @@ const OwnerOnboarding = () => {
           {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">3</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>3</span>
                 Verwachtingen
               </h2>
 
@@ -321,7 +322,7 @@ const OwnerOnboarding = () => {
                   type="number"
                   value={expectations.cost_sharing_euro}
                   onChange={(e) => setExpectations({...expectations, cost_sharing_euro: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
                 />
               </div>
 
@@ -335,7 +336,7 @@ const OwnerOnboarding = () => {
                       onClick={() => toggleArrayItem(expectations.tasks_expected, task, (items) => setExpectations({...expectations, tasks_expected: items}))}
                       className={`p-2 text-sm rounded-lg border transition-colors ${
                         expectations.tasks_expected.includes(task)
-                          ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
+                          ? 'border-role text-role bg-role-soft'
                           : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
@@ -350,7 +351,7 @@ const OwnerOnboarding = () => {
                 <select
                   value={expectations.riding_frequency}
                   onChange={(e) => setExpectations({...expectations, riding_frequency: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
                 >
                   <option value="">Selecteer...</option>
                   {ridingFrequencies.map(freq => (
@@ -364,7 +365,7 @@ const OwnerOnboarding = () => {
                 <select
                   value={expectations.supervision_level}
                   onChange={(e) => setExpectations({...expectations, supervision_level: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
                 >
                   <option value="">Selecteer...</option>
                   {supervisionLevels.map(level => (
@@ -379,7 +380,7 @@ const OwnerOnboarding = () => {
           {currentStep > 3 && currentStep < 6 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">{currentStep}</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>{currentStep}</span>
                 Stap {currentStep} - Coming Soon
               </h2>
               <p className="text-gray-600">Deze stap wordt binnenkort toegevoegd...</p>
@@ -393,7 +394,7 @@ const OwnerOnboarding = () => {
               <p className="text-gray-600">Je bent bijna klaar! Controleer je gegevens en voltooi je profiel.</p>
               <button
                 onClick={handleSubmit}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300"
+                className="w-full btn-role font-semibold py-3 px-6 rounded-full transition-all duration-300"
               >
                 Profiel Voltooien
               </button>
@@ -417,7 +418,7 @@ const OwnerOnboarding = () => {
             <button
               onClick={handleSubmit}
               disabled={!isFormValid}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFormValid ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFormValid ? 'btn-role' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
               Opslaan
             </button>

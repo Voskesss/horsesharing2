@@ -414,7 +414,7 @@ export default function HorseAdWizard() {
   const step1Ready = hasAdTypes && hasTitle && hasDesc && hasName && hasType && hasGender && hasAge && hasHeight && hasAddrCoreStep1 && hasPhotos;
 
   return (
-    <div className="min-h-screen bg-role-soft py-12 px-4">
+    <div className="min-h-screen bg-role-gradient py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <div className="text-center mb-8">

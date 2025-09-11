@@ -68,7 +68,7 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
     onChange(arr);
   }, [onChange, value]);
 
-  const borderCls = dragOver ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 bg-white';
+  const borderCls = dragOver ? 'border-role bg-role-soft' : 'border-gray-300 bg-white';
 
   return (
     <div>
@@ -86,7 +86,7 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
             type="button"
             onClick={()=>inputRef.current?.click()}
             disabled={busy || remaining<=0}
-            className={`px-3 py-2 rounded ${busy || remaining<=0 ? 'bg-gray-200 text-gray-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+            className={`px-3 py-2 rounded ${busy || remaining<=0 ? 'bg-gray-200 text-gray-500' : 'btn-role'}`}
           >
             {busy ? 'Uploaden...' : `Kies bestanden (${remaining} over)`}
           </button>
@@ -101,7 +101,7 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
             <div key={url+idx} className="relative">
               {/* badge hoofdfoto */}
               {idx === 0 && (
-                <span className="absolute -top-2 left-0 z-10 text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow">Hoofdfoto</span>
+                <span className="absolute -top-2 left-0 z-10 text-[10px] px-2 py-0.5 rounded-full text-white shadow" style={{ backgroundColor: 'var(--role-primary)' }}>Hoofdfoto</span>
               )}
               <img src={url} alt="uploaded" className="w-24 h-24 object-cover rounded border" />
               <div className="absolute -top-2 -right-2 flex gap-1">
@@ -109,7 +109,7 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
               </div>
               <div className="mt-1 flex items-center justify-center gap-1">
                 <button type="button" onClick={()=>move(idx, -1)} disabled={idx===0} title="Naar links" className={`px-2 py-0.5 text-xs rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-gray-700 border-gray-300 hover:bg-gray-50'}`}>←</button>
-                <button type="button" onClick={()=>makeCover(idx)} disabled={idx===0} title="Maak hoofdfoto" className={`px-2 py-0.5 text-xs rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-emerald-700 border-emerald-300 hover:bg-emerald-50'}`}>Hoofd</button>
+                <button type="button" onClick={()=>makeCover(idx)} disabled={idx===0} title="Maak hoofdfoto" className={`px-2 py-0.5 text-xs rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-role border-role bg-role-soft hover:brightness-95'}`}>Hoofd</button>
                 <button type="button" onClick={()=>move(idx, 1)} disabled={idx===value.length-1} title="Naar rechts" className={`px-2 py-0.5 text-xs rounded border ${idx===value.length-1 ? 'text-gray-400 border-gray-200' : 'text-gray-700 border-gray-300 hover:bg-gray-50'}`}>→</button>
               </div>
             </div>

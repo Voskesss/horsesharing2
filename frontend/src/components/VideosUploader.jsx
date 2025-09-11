@@ -72,7 +72,7 @@ export default function VideosUploader({ value = [], onChange, api, maxItems = 3
     onChange(arr);
   }, [onChange, value]);
 
-  const borderCls = dragOver ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 bg-white';
+  const borderCls = dragOver ? 'border-role bg-role-soft' : 'border-gray-300 bg-white';
 
   return (
     <div>
@@ -90,7 +90,7 @@ export default function VideosUploader({ value = [], onChange, api, maxItems = 3
             type="button"
             onClick={()=>inputRef.current?.click()}
             disabled={busy || remaining<=0}
-            className={`px-3 py-2 rounded ${busy || remaining<=0 ? 'bg-gray-200 text-gray-500' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+            className={`px-3 py-2 rounded ${busy || remaining<=0 ? 'bg-gray-200 text-gray-500' : 'btn-role'}`}
           >
             {busy ? 'Uploaden...' : `Kies video's (${remaining} over)`}
           </button>
@@ -112,14 +112,14 @@ export default function VideosUploader({ value = [], onChange, api, maxItems = 3
             <div key={url+idx} className="flex items-center gap-3">
               <div className="relative">
                 {idx === 0 && (
-                  <span className="absolute -top-2 left-0 z-10 text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow">Hoofdvideo</span>
+                  <span className="absolute -top-2 left-0 z-10 text-[10px] px-2 py-0.5 rounded-full text-white shadow" style={{ backgroundColor: 'var(--role-primary)' }}>Hoofdvideo</span>
                 )}
                 <video src={url} controls className="w-48 h-28 object-cover rounded border" />
               </div>
               <div className="flex-1 truncate text-sm text-gray-700">{url}</div>
               <div className="flex items-center gap-1">
                 <button type="button" onClick={()=>move(idx,-1)} disabled={idx===0} title="Naar boven" className={`px-2 py-1 text-sm rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-gray-700 border-gray-300 hover:bg-gray-50'}`}>↑</button>
-                <button type="button" onClick={()=>makeCover(idx)} disabled={idx===0} title="Maak hoofdvideo" className={`px-2 py-1 text-sm rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-emerald-700 border-emerald-300 hover:bg-emerald-50'}`}>Hoofd</button>
+                <button type="button" onClick={()=>makeCover(idx)} disabled={idx===0} title="Maak hoofdvideo" className={`px-2 py-1 text-sm rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-role border-role bg-role-soft hover:brightness-95'}`}>Hoofd</button>
                 <button type="button" onClick={()=>move(idx,1)} disabled={idx===value.length-1} title="Naar beneden" className={`px-2 py-1 text-sm rounded border ${idx===value.length-1 ? 'text-gray-400 border-gray-200' : 'text-gray-700 border-gray-300 hover:bg-gray-50'}`}>↓</button>
                 <button type="button" onClick={()=>removeAt(idx)} className="px-2 py-1 text-sm border rounded hover:bg-gray-50">Verwijderen</button>
               </div>

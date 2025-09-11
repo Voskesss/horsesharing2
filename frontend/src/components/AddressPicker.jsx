@@ -66,7 +66,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
           <select
             value={v.country_code || 'NL'}
             onChange={(e)=> setField('country_code', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
           >
             {EU_COUNTRIES.map(c => (
               <option key={c.code} value={c.code}>{c.name}</option>
@@ -80,7 +80,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
             value={v.postcode || ''}
             onChange={(e)=> setField('postcode', e.target.value.toUpperCase().replace(/\s+/g, ''))}
             placeholder={v.country_code === 'NL' ? '1234AB' : ''}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
           />
         </div>
         <div className="grid grid-cols-5 gap-2 items-end">
@@ -90,7 +90,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
               type="text"
               value={v.house_number || ''}
               onChange={(e)=> setField('house_number', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
             />
           </div>
           <div className="col-span-2">
@@ -99,16 +99,16 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
               type="text"
               value={v.house_number_addition || ''}
               onChange={(e)=> setField('house_number_addition', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
             />
           </div>
         </div>
       </div>
 
       <div className="flex gap-2 items-center">
-        <button type="button" onClick={doLookup} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Zoek adres</button>
+        <button type="button" onClick={doLookup} className="btn-role rounded-lg">Zoek adres</button>
         {status.state === 'loading' && <span className="text-sm text-gray-600">{status.message}</span>}
-        {status.state === 'ok' && <span className="text-sm text-emerald-700">{status.message}</span>}
+        {status.state === 'ok' && <span className="text-sm text-role">{status.message}</span>}
         {status.state === 'error' && <span className="text-sm text-red-600">{status.message}</span>}
       </div>
 
@@ -119,7 +119,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
             type="text"
             value={v.street || ''}
             onChange={(e)=> setField('street', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
           />
         </div>
         <div>
@@ -128,7 +128,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
             type="text"
             value={v.city || ''}
             onChange={(e)=> setField('city', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
           />
         </div>
       </div>

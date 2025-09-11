@@ -39,6 +39,13 @@ const OwnerHorses = () => {
     if (!isAuthenticated) { navigate('/'); return; }
     (async () => {
       try {
+        // Auto-switch naar owner rol voor consistente themakleur als user beide profielen heeft
+        try {
+          const me = await api.user.getMe();
+          if (me?.has_owner_profile && me?.has_rider_profile && me?.profile_type_chosen !== 'owner') {
+            await api.user.setRole('owner');
+          }
+        } catch {}
         const res = await api.ownerHorses.list();
         setItems(Array.isArray(res?.horses) ? res.horses : []);
       } catch (e) {
@@ -63,14 +70,14 @@ const OwnerHorses = () => {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-emerald-50 py-10 px-4">
+    <div className="min-h-screen bg-role-gradient py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Mijn Paarden</h1>
             <p className="text-gray-600">Beheer je concepten en advertenties</p>
           </div>
-          <button onClick={() => navigate('/owner/horses/new')} className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 shadow">
+          <button onClick={() => navigate('/owner/horses/new')} className="btn-role shadow">
             Nieuwe advertentie
           </button>
         </div>
@@ -89,7 +96,7 @@ const OwnerHorses = () => {
                       <div className="text-sm text-gray-500">#{h.id}</div>
                       <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <span>{h.title || '(titel ontbreekt)'}</span>
-                        <span className={`px-2 py-0.5 text-xs rounded-full border ${h.is_available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        <span className={`px-2 py-0.5 text-xs rounded-full border ${h.is_available ? 'chip-role' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
                           {h.is_available ? 'gepubliceerd' : 'concept'}
                         </span>
                       </h3>
@@ -98,7 +105,7 @@ const OwnerHorses = () => {
                       </div>
                       <div className="mt-2 flex gap-2 flex-wrap">
                         {(Array.isArray(h.ad_types) ? h.ad_types : (h.ad_type ? [h.ad_type] : [])).map(t => (
-                          <span key={t} className="px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">{t}</span>
+                          <span key={t} className="chip-role">{t}</span>
                         ))}
                       </div>
                     </div>
@@ -109,12 +116,12 @@ const OwnerHorses = () => {
                     )}
                   </div>
                   <div className="mt-4 flex gap-3 flex-wrap">
-                    <button onClick={() => navigate(`/ads/${h.id}`)} className="px-3 py-1.5 text-sm rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200">Bekijken</button>
-                    <button onClick={() => navigate(`/owner/horses/${h.id}/edit`)} className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Bewerken</button>
+                    <button onClick={() => navigate(`/ads/${h.id}`)} className="px-3 py-1.5 text-sm rounded-lg border border-role text-role bg-role-soft hover:brightness-95">Bekijken</button>
+                    <button onClick={() => navigate(`/owner/horses/${h.id}/edit`)} className="btn-role text-sm">Bewerken</button>
                     {h.is_available ? (
                       <button onClick={() => setPublished(h.id, false)} className="px-3 py-1.5 text-sm rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300">Naar concept</button>
                     ) : (
-                      <button onClick={() => setPublished(h.id, true)} className="px-3 py-1.5 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Publiceren</button>
+                      <button onClick={() => setPublished(h.id, true)} className="btn-role text-sm">Publiceren</button>
                     )}
                     <button onClick={() => onDelete(h.id)} className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Verwijderen</button>
                   </div>

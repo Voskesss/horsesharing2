@@ -53,10 +53,10 @@ export default function AdDetail() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-emerald-50 py-8 px-4">
+    <div className="min-h-screen bg-role-gradient py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-4">
-          <button onClick={()=>navigate(-1)} className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">← Terug</button>
+          <button onClick={()=>navigate(-1)} className="px-3 py-1.5 rounded-lg bg-white border border-role text-role hover:bg-role-soft">← Terug</button>
         </div>
 
         {loading && (
@@ -91,7 +91,7 @@ export default function AdDetail() {
                 {media.length > 1 && (
                   <div className="flex gap-2 overflow-x-auto p-3 bg-white">
                     {media.map((m, i) => (
-                      <div key={m.src+i} className={`relative flex-none w-28 h-16 rounded border cursor-pointer ${i===activeIdx ? 'border-emerald-500' : 'border-gray-200'}`} onClick={()=>setActiveIdx(i)}>
+                      <div key={m.src+i} className={`relative flex-none w-28 h-16 rounded border cursor-pointer ${i===activeIdx ? 'border-role' : 'border-gray-200'}`} onClick={()=>setActiveIdx(i)}>
                         {m.type==='image' ? (
                           <img src={m.src} alt="thumb" className="w-full h-full object-cover rounded" />
                         ) : (
@@ -119,7 +119,7 @@ export default function AdDetail() {
                 {Array.isArray(ad.ad_types) && ad.ad_types.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {ad.ad_types.map(t => (
-                      <span key={t} className="px-2 py-0.5 text-xs rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">{t}</span>
+                      <span key={t} className="chip-role">{t}</span>
                     ))}
                   </div>
                 )}

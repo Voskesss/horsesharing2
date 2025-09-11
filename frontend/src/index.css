@@ -7,18 +7,24 @@
   --role-primary: #059669; /* emerald-600 default */
   --role-primary-50: #ecfdf5; /* emerald-50 */
   --role-accent: #0ea5e9; /* sky-500 */
+  --role-bg-from: #ecfdf5; /* default gradient start */
+  --role-bg-to: #eff6ff;   /* default gradient end (blue-50) */
 }
 
 body[data-role="rider"] {
   --role-primary: #059669; /* emerald-600 */
   --role-primary-50: #ecfdf5; /* emerald-50 */
   --role-accent: #0ea5e9; /* sky-500 */
+  --role-bg-from: #ecfdf5; /* emerald-50 */
+  --role-bg-to: #eff6ff;   /* blue-50 */
 }
 
 body[data-role="owner"] {
   --role-primary: #d97706; /* amber-600 */
   --role-primary-50: #fffbeb; /* amber-50 */
   --role-accent: #f43f5e; /* rose-500 */
+  --role-bg-from: #fffbeb; /* amber-50 */
+  --role-bg-to: #fff1f2;   /* rose-50 */
 }
 
 /* Utility helpers that read the variables */
@@ -48,3 +54,8 @@ body[data-role="owner"] {
 
 .link-role { color: var(--role-primary); }
 .link-role:hover { text-decoration: underline; filter: brightness(0.9); }
+
+/* Background gradient helper using role vars */
+.bg-role-gradient {
+  background: linear-gradient(135deg, var(--role-bg-from), var(--role-bg-to));
+}
