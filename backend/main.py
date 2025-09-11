@@ -217,6 +217,30 @@ async def get_me(request: Request, current_user: User = Depends(get_current_user
         "created_at": current_user.created_at
     }
 
+class SetRolePayload(BaseModel):
+    role: str  # 'rider' or 'owner'
+
+@app.post("/auth/set-role")
+async def set_role(payload: SetRolePayload, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    role = (payload.role or '').strip().lower()
+    if role not in ("rider", "owner"):
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+    if role == "owner":
+        has_owner = db.query(OwnerProfile).filter(OwnerProfile.user_id == current_user.id).first() is not None
+        if not has_owner:
+            raise HTTPException(status_code=400, detail="Owner profile not found")
+    else:
+        has_rider = db.query(RiderProfile).filter(RiderProfile.user_id == current_user.id).first() is not None
+        if not has_rider:
+            raise HTTPException(status_code=400, detail="Rider profile not found")
+
+    current_user.profile_type_chosen = role
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    # Return same shape as /auth/me
+    return await get_me(Request(scope={"type": "http", "headers": []}), current_user)
 
 class ProfileTypeRequest(BaseModel):
     profile_type: str

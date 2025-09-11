@@ -159,6 +159,15 @@ export const createAPI = (getToken) => ({
         body: JSON.stringify({ profile_type: profileType }),
       }, token);
     },
+
+    // Activeer rol-context (rider/owner)
+    async setRole(role) {
+      const token = await getToken();
+      return apiCall('/auth/set-role', {
+        method: 'POST',
+        body: JSON.stringify({ role }),
+      }, token);
+    },
   },
 });
 
