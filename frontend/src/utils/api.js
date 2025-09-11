@@ -346,10 +346,10 @@ export function transformProfileDataForAPI(profileData) {
   // Rijstijl & uitrusting
   add('riding_styles', Array.isArray(preferences.riding_styles) ? preferences.riding_styles : []);
 
-  // Media
-  add('photos', Array.isArray(media.photos) ? media.photos : []);
+  // Media: altijd meesturen, ook als leeg (om velden te kunnen leegmaken)
+  out['photos'] = Array.isArray(media.photos) ? media.photos : [];
   // videos: array zoals in HorseWizard; backend houdt ook legacy video_intro_url bij
-  add('videos', Array.isArray(media.videos) ? media.videos : []);
+  out['videos'] = Array.isArray(media.videos) ? media.videos : [];
   add('video_intro_url', media.video_intro_url);
 
   return out;

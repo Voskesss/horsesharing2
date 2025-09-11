@@ -507,7 +507,47 @@ const RiderOnboarding = () => {
                   api={createAPI(getToken)}
                   max={1}
                 />
-                <p className="text-xs text-gray-500 mt-2">Deze foto wordt gebruikt in je ruitersprofiel. Je kunt later altijd wisselen.</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <p className="text-xs text-gray-500">Deze foto wordt gebruikt in je ruitersprofiel.</p>
+                  {(Array.isArray(media.photos) && media.photos.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        // Pauzeer autosave om race conditions te voorkomen
+                        pausedRef.current = true;
+                        const next = [];
+                        setMedia({ ...media, photos: next });
+                        try {
+                          const api = createAPI(getToken);
+                          await api.riderProfile.createOrUpdate({ photos: next });
+                          // Markeer dat prefill niet meer mag gebeuren
+                          try {
+                            const me = await api.user.getMe();
+                            const prefillKey = `rider_prefill_owner_avatar_done_${me?.id || 'anon'}`;
+                            localStorage.setItem(prefillKey, '1');
+                          } catch {}
+                          // Refetch om UI te synchroniseren met server
+                          try {
+                            const fresh = await api.riderProfile.get();
+                            const t = transformProfileDataFromAPI(fresh);
+                            setMedia(t.media);
+                          } catch {}
+                          window.dispatchEvent(new CustomEvent('profilePhotoUpdated', { detail: { role: 'rider' } }));
+                        } catch (e) {
+                          console.warn('Verwijderen profielfoto mislukt:', e?.message || e);
+                          // rollback UI indien gewenst? Voor nu laten zoals is.
+                        } finally {
+                          // hervat autosave
+                          pausedRef.current = false;
+                        }
+                      }}
+                      className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50"
+                      title="Profielfoto verwijderen"
+                    >
+                      Verwijderen
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
