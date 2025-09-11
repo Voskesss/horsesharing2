@@ -812,7 +812,7 @@ export default function HorseAdWizard() {
                 <button
                   onClick={() => step1Ready ? setStep(step + 1) : null}
                   disabled={step === 1 ? !step1Ready : false}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${step === 1 ? (!step1Ready ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700') : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${step === 1 ? (!step1Ready ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'btn-role') : 'btn-role'}`}
                 >
                   Volgende
                 </button>
@@ -823,7 +823,7 @@ export default function HorseAdWizard() {
                 )}
               </div>
             ) : (
-              <button onClick={handleSave} className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 transition-colors">
+              <button onClick={handleSave} className="px-6 py-2 rounded-lg font-medium btn-role">
                 Opslaan
               </button>
             )}
