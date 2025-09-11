@@ -475,22 +475,22 @@ export default function HorseAdWizard() {
               {/* Titel */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Verzin een mooie, duidelijke en pakkende titel voor jouw paard *</label>
-                <input type="text" placeholder="Bijv. Lieve allround merrie zoekt rustige bijrijder (Velp)" value={basic.title} onChange={(e)=>setBasic({...basic, title: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                <input type="text" placeholder="Bijv. Lieve allround merrie zoekt rustige bijrijder (Velp)" value={basic.title} onChange={(e)=>setBasic({...basic, title: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
               </div>
               {/* Advertentietekst */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Advertentietekst</label>
-                <textarea placeholder={"Vertel iets over je paard, wat je zoekt en wanneer. Bijv.: Bella is een rustige merrie van 1.58m. Ik zoek een geduldige bijrijder voor 2 dagen p/w, doordeweeks in de avond. Binnen- en buitenbak aanwezig. Omgeving Velp."} value={basic.description} onChange={(e)=>setBasic({...basic, description: e.target.value})} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                <textarea placeholder={"Vertel iets over je paard, wat je zoekt en wanneer. Bijv.: Bella is een rustige merrie van 1.58m. Ik zoek een geduldige bijrijder voor 2 dagen p/w, doordeweeks in de avond. Binnen- en buitenbak aanwezig. Omgeving Velp."} value={basic.description} onChange={(e)=>setBasic({...basic, description: e.target.value})} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
               </div>
               {/* Basisgegevens */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Naam</label>
-                  <input type="text" value={basic.name} onChange={(e)=>setBasic({...basic, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                  <input type="text" value={basic.name} onChange={(e)=>setBasic({...basic, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                  <select value={basic.type} onChange={(e)=>setBasic({...basic, type: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                  <select value={basic.type} onChange={(e)=>setBasic({...basic, type: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}>
                     <option value="horse">Paard</option>
                     <option value="pony">Pony</option>
                   </select>
@@ -499,7 +499,7 @@ export default function HorseAdWizard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Geslacht</label>
-                  <select value={basic.gender} onChange={(e)=>setBasic({...basic, gender: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                  <select value={basic.gender} onChange={(e)=>setBasic({...basic, gender: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}>
                     <option value="">Selecteer...</option>
                     <option value="merrie">Merrie</option>
                     <option value="hengst">Hengst</option>
@@ -508,16 +508,16 @@ export default function HorseAdWizard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Leeftijd</label>
-                  <input type="number" value={basic.age} onChange={(e)=>setBasic({...basic, age: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                  <input type="number" value={basic.age} onChange={(e)=>setBasic({...basic, age: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Stokmaat (cm)</label>
-                  <input type="number" value={basic.height} onChange={(e)=>setBasic({...basic, height: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                  <input type="number" value={basic.height} onChange={(e)=>setBasic({...basic, height: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ras</label>
-                <input type="text" value={basic.breed} onChange={(e)=>setBasic({...basic, breed: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                <input type="text" value={basic.breed} onChange={(e)=>setBasic({...basic, breed: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
               </div>
               {/* Staladres (als derde van onderen) */}
               <div className="p-4 border rounded-lg bg-gray-50">
@@ -653,7 +653,7 @@ export default function HorseAdWizard() {
                       <button key={d} type="button" onClick={()=>{
                         const has = filters.disciplines.includes(d);
                         setFilters({...filters, disciplines: has ? filters.disciplines.filter(x=>x!==d) : [...filters.disciplines, d]});
-                      }} className={`px-3 py-1 rounded-full border text-sm ${filters.disciplines.includes(d) ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{d}</button>
+                      }} className={`px-3 py-1 rounded-full border text-sm ${filters.disciplines.includes(d) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{d}</button>
                     ))}
                   </div>
                 </div>
@@ -664,7 +664,7 @@ export default function HorseAdWizard() {
                       <button key={t} type="button" onClick={()=>{
                         const has = filters.temperament.includes(t);
                         setFilters({...filters, temperament: has ? filters.temperament.filter(x=>x!==t) : [...filters.temperament, t]});
-                      }} className={`px-3 py-1 rounded-full border text-sm ${filters.temperament.includes(t) ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
+                      }} className={`px-3 py-1 rounded-full border text-sm ${filters.temperament.includes(t) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
                     ))}
                   </div>
                 </div>
@@ -678,20 +678,20 @@ export default function HorseAdWizard() {
                       <button key={c} type="button" onClick={()=>{
                         const has = filters.coat_colors.includes(c);
                         setFilters({...filters, coat_colors: has ? filters.coat_colors.filter(x=>x!==c) : [...filters.coat_colors, c]});
-                      }} className={`px-3 py-1 rounded-full border text-sm ${filters.coat_colors.includes(c) ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{c}</button>
+                      }} className={`px-3 py-1 rounded-full border text-sm ${filters.coat_colors.includes(c) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{c}</button>
                     ))}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Niveau</label>
-                  <select value={filters.level} onChange={(e)=>setFilters({...filters, level: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                  <select value={filters.level} onChange={(e)=>setFilters({...filters, level: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}>
                     <option value="">Selecteer...</option>
                     {['L1','L2','M','Z'].map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Max spronghoogte (cm)</label>
-                  <input type="number" value={filters.max_jump_height} onChange={(e)=>setFilters({...filters, max_jump_height: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                  <input type="number" value={filters.max_jump_height} onChange={(e)=>setFilters({...filters, max_jump_height: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
               </div>
 
@@ -705,13 +705,13 @@ export default function HorseAdWizard() {
                       {k:'with_other_horses', label:'Met andere paarden'},
                     ].map(opt => (
                       <button key={opt.k} type="button" onClick={()=>setFilters({...filters, comfort_flags: {...filters.comfort_flags, [opt.k]: !filters.comfort_flags[opt.k]}})}
-                        className={`px-3 py-1 rounded-full border text-sm ${filters.comfort_flags[opt.k] ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{opt.label}</button>
+                        className={`px-3 py-1 rounded-full border text-sm ${filters.comfort_flags[opt.k] ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{opt.label}</button>
                     ))}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Activiteitstype</label>
-                  <select value={filters.activity_mode} onChange={(e)=>setFilters({...filters, activity_mode: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                  <select value={filters.activity_mode} onChange={(e)=>setFilters({...filters, activity_mode: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}>
                     <option value="ride_or_care">Rijden of verzorgen</option>
                     <option value="ride_only">Alleen rijden</option>
                     <option value="care_only">Alleen verzorgen</option>
@@ -736,7 +736,7 @@ export default function HorseAdWizard() {
                     <button key={t} type="button" onClick={()=>{
                       const has = expectations.required_tasks.includes(t);
                       setExpectations({...expectations, required_tasks: has ? expectations.required_tasks.filter(x=>x!==t) : [...expectations.required_tasks, t]});
-                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.required_tasks.includes(t) ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
+                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.required_tasks.includes(t) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -748,7 +748,7 @@ export default function HorseAdWizard() {
                     <button key={t} type="button" onClick={()=>{
                       const has = expectations.optional_tasks.includes(t);
                       setExpectations({...expectations, optional_tasks: has ? expectations.optional_tasks.filter(x=>x!==t) : [...expectations.optional_tasks, t]});
-                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.optional_tasks.includes(t) ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
+                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.optional_tasks.includes(t) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -760,7 +760,7 @@ export default function HorseAdWizard() {
                     <button key={s} type="button" onClick={()=>{
                       const has = expectations.required_skills.includes(s);
                       setExpectations({...expectations, required_skills: has ? expectations.required_skills.filter(x=>x!==s) : [...expectations.required_skills, s]});
-                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.required_skills.includes(s) ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{s.replace('_',' ')}</button>
+                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.required_skills.includes(s) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{s.replace('_',' ')}</button>
                   ))}
                 </div>
               </div>
@@ -772,7 +772,7 @@ export default function HorseAdWizard() {
                     <button key={p} type="button" onClick={()=>{
                       const has = expectations.desired_rider_personality.includes(p);
                       setExpectations({...expectations, desired_rider_personality: has ? expectations.desired_rider_personality.filter(x=>x!==p) : [...expectations.desired_rider_personality, p]});
-                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.desired_rider_personality.includes(p) ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{p}</button>
+                    }} className={`px-3 py-1 rounded-full border text-sm ${expectations.desired_rider_personality.includes(p) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{p}</button>
                   ))}
                 </div>
               </div>
