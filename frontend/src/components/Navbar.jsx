@@ -9,6 +9,8 @@ const Navbar = () => {
   const [me, setMe] = useState(null);
   const [meLoaded, setMeLoaded] = useState(false);
   const [open, setOpen] = useState(false);
+  const [riderPhotoUrl, setRiderPhotoUrl] = useState(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
   const menuRef = useRef(null);
   const api = useMemo(() => createAPI(getToken), [getToken]);
 
@@ -45,6 +47,36 @@ const Navbar = () => {
     } else {
       delete document.body.dataset.role;
     }
+  }, [currentRole]);
+
+  // Wanneer rol 'rider' actief is, laad de eerste rider-foto als avatar
+  useEffect(() => {
+    let mounted = true;
+    const loadRiderPhoto = async () => {
+      try {
+        if (!isAuthenticated) return;
+        if (currentRole !== 'rider') { setRiderPhotoUrl(null); return; }
+        const rp = await api.riderProfile.get();
+        const arr = Array.isArray(rp?.photos) ? rp.photos : (Array.isArray(rp?.media?.photos) ? rp.media.photos : []);
+        if (mounted) setRiderPhotoUrl(arr && arr.length ? arr[0] : null);
+      } catch {
+        if (mounted) setRiderPhotoUrl(null);
+      }
+    };
+    loadRiderPhoto();
+    return () => { mounted = false; };
+  }, [api, isAuthenticated, currentRole, avatarVersion]);
+
+  // Luister naar globale event om avatar te verversen na upload
+  useEffect(() => {
+    const onUpdated = (e) => {
+      const role = e?.detail?.role;
+      if (!role || role === currentRole) {
+        setAvatarVersion(v => v + 1);
+      }
+    };
+    window.addEventListener('profilePhotoUpdated', onUpdated);
+    return () => window.removeEventListener('profilePhotoUpdated', onUpdated);
   }, [currentRole]);
 
   const switchRole = async (role) => {
@@ -108,8 +140,10 @@ const Navbar = () => {
                 </div>
                 <div className="relative" ref={menuRef}>
                   <button onClick={() => setOpen(v => !v)} className="flex items-center space-x-3 group">
-                    {me?.owner_photo_url ? (
+                    {currentRole === 'owner' && me?.owner_photo_url ? (
                       <img src={me.owner_photo_url} alt="profiel" className={`w-8 h-8 rounded-full object-cover ring-2 ${avatarRing}`} />
+                    ) : currentRole === 'rider' && riderPhotoUrl ? (
+                      <img src={riderPhotoUrl} alt="profiel" className={`w-8 h-8 rounded-full object-cover ring-2 ${avatarRing}`} />
                     ) : (
                       <div className={`w-8 h-8 bg-gradient-to-br ${brandGradient} rounded-full flex items-center justify-center`}>
                         <span className="text-white font-semibold text-sm">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
 import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
+import ImageUploader from '../components/ImageUploader';
 
 const RiderOnboarding = () => {
   const navigate = useNavigate();
@@ -243,6 +244,14 @@ const RiderOnboarding = () => {
         setLease(transformedData.lease || { wants_lease: false, budget_max_pm_lease: undefined });
         setPreferences(transformedData.preferences);
         setMedia(transformedData.media);
+        // Prefill profielfoto vanuit owner als rider nog geen foto heeft
+        try {
+          const me = await api.user.getMe();
+          const ownerUrl = me?.owner_photo_url || '';
+          if ((!Array.isArray(transformedData.media.photos) || transformedData.media.photos.length === 0) && ownerUrl) {
+            setMedia({ photos: [ownerUrl], video_intro_url: transformedData.media.video_intro_url || '' });
+          }
+        } catch {}
         
         console.log('✅ Profile state updated successfully');
         console.log('📋 Current basicInfo state:', transformedData.basicInfo);
@@ -473,6 +482,26 @@ const RiderOnboarding = () => {
                 <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>1</span>
                 Basis Informatie
               </h2>
+              {/* Profielfoto bovenaan */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Profielfoto</label>
+                <ImageUploader
+                  value={(media.photos || []).slice(0,1)}
+                  onChange={async (urls) => {
+                    const one = (urls || []).slice(0,1);
+                    setMedia({ ...media, photos: one });
+                    try {
+                      const api = createAPI(getToken);
+                      await api.riderProfile.createOrUpdate({ photos: one });
+                    } catch (e) {
+                      console.warn('Autosave profielfoto mislukt:', e?.message || e);
+                    }
+                  }}
+                  api={createAPI(getToken)}
+                  max={1}
+                />
+                <p className="text-xs text-gray-500 mt-2">Deze foto wordt gebruikt in je ruitersprofiel. Je kunt later altijd wisselen.</p>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
