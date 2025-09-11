@@ -77,6 +77,13 @@ const OwnerOnboarding = () => {
     (async () => {
       try {
         if (!isAuthenticated) return;
+        // Auto-switch naar owner rol voor consistente themakleur als user beide profielen heeft
+        try {
+          const me = await api.user.getMe();
+          if (me?.has_owner_profile && me?.has_rider_profile && me?.profile_type_chosen !== 'owner') {
+            await api.user.setRole('owner');
+          }
+        } catch {}
         const resp = await api.ownerProfile.get();
         if (resp && resp.profile) {
           setBasicInfo(prev => ({
@@ -183,12 +190,12 @@ const OwnerOnboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 py-12 px-4">
+    <div className="min-h-screen bg-role-soft py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--role-primary)' }}>
               <span className="text-2xl">🐎</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Eigenaar Profiel</h1>
@@ -198,13 +205,13 @@ const OwnerOnboarding = () => {
           {/* Progress */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-emerald-600">Stap {currentStep} van {totalSteps}</span>
+              <span className="text-sm font-medium text-role">Stap {currentStep} van {totalSteps}</span>
               <span className="text-sm text-gray-500">{Math.round((currentStep / totalSteps) * 100)}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                className="h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep / totalSteps) * 100}%`, backgroundColor: 'var(--role-primary)' }}
               ></div>
             </div>
           </div>
@@ -226,7 +233,7 @@ const OwnerOnboarding = () => {
                     type="text"
                     value={basicInfo.first_name}
                     onChange={(e) => setBasicInfo({...basicInfo, first_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
                   />
                 </div>
                 <div>
@@ -235,7 +242,7 @@ const OwnerOnboarding = () => {
                     type="text"
                     value={basicInfo.last_name}
                     onChange={(e) => setBasicInfo({...basicInfo, last_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
                   />
                 </div>
               </div>
@@ -246,7 +253,8 @@ const OwnerOnboarding = () => {
                   type="tel"
                   value={basicInfo.phone}
                   onChange={(e) => setBasicInfo({...basicInfo, phone: e.target.value})}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${errors.phone ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${errors.phone ? 'border-red-400' : 'border-gray-300'}`}
+                  style={{ outlineColor: 'var(--role-primary)' }}
                 />
                 {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
               </div>
