@@ -4,6 +4,7 @@ import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
 import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
 import ImageUploader from '../components/ImageUploader';
+import VideosUploader from '../components/VideosUploader';
 
 const RiderOnboarding = () => {
   const navigate = useNavigate();
@@ -147,6 +148,7 @@ const RiderOnboarding = () => {
   // Media
   const [media, setMedia] = useState({
     photos: [],
+    videos: [],
     video_intro_url: ''
   });
 
@@ -244,12 +246,15 @@ const RiderOnboarding = () => {
         setLease(transformedData.lease || { wants_lease: false, budget_max_pm_lease: undefined });
         setPreferences(transformedData.preferences);
         setMedia(transformedData.media);
-        // Prefill profielfoto vanuit owner als rider nog geen foto heeft
+        // Prefill profielfoto vanuit owner als rider nog geen foto heeft (eenmalig)
         try {
           const me = await api.user.getMe();
           const ownerUrl = me?.owner_photo_url || '';
-          if ((!Array.isArray(transformedData.media.photos) || transformedData.media.photos.length === 0) && ownerUrl) {
-            setMedia({ photos: [ownerUrl], video_intro_url: transformedData.media.video_intro_url || '' });
+          const prefillKey = `rider_prefill_owner_avatar_done_${me?.id || 'anon'}`;
+          const already = localStorage.getItem(prefillKey) === '1';
+          if ((!Array.isArray(transformedData.media.photos) || transformedData.media.photos.length === 0) && ownerUrl && !already) {
+            setMedia({ photos: [ownerUrl], videos: transformedData.media.videos || [], video_intro_url: transformedData.media.video_intro_url || '' });
+            localStorage.setItem(prefillKey, '1');
           }
         } catch {}
         
@@ -1924,90 +1929,49 @@ const RiderOnboarding = () => {
                 Media & Voltooien
               </h2>
 
-              <div className="space-y-6">
-                {/* Foto Upload */}
+              <div className="space-y-8">
+                {/* Overige foto's (exclusief profielfoto) */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Profiel foto's
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                    <div className="space-y-2">
-                      <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                        <span className="text-2xl">📷</span>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          Sleep foto's hierheen of klik om te uploaden
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          PNG, JPG tot 5MB (max 5 foto's)
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files);
-                          if (files.length > 5) {
-                            alert('Maximaal 5 foto\'s toegestaan');
-                            return;
-                          }
-                          // Voor nu slaan we alleen de bestandsnamen op
-                          const fileNames = files.map(file => file.name);
-                          setMedia({...media, photos: fileNames});
-                        }}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label
-                        htmlFor="photo-upload"
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
-                      >
-                        Foto's Selecteren
-                      </label>
-                    </div>
+                  <div className="flex items-baseline justify-between">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Overige foto’s</label>
+                    <span className="text-xs text-gray-500">De eerste foto (Stap 1) is je profielfoto</span>
                   </div>
-                  
-                  {media.photos.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-600 mb-2">Geselecteerde foto's:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {media.photos.map((photo, index) => (
-                          <div key={index} className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-sm">
-                            <span className="text-blue-700">{photo}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newPhotos = media.photos.filter((_, i) => i !== index);
-                                setMedia({...media, photos: newPhotos});
-                              }}
-                              className="ml-2 text-blue-500 hover:text-blue-700"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <ImageUploader
+                    value={(media.photos || []).slice(1)}
+                    onChange={async (urls) => {
+                      const avatar = (media.photos || [])[0];
+                      const merged = avatar ? [avatar, ...urls] : urls;
+                      setMedia({ ...media, photos: merged });
+                      try {
+                        const api = createAPI(getToken);
+                        await api.riderProfile.createOrUpdate({ photos: merged });
+                      } catch (e) {
+                        console.warn('Autosave galerij mislukt:', e?.message || e);
+                      }
+                    }}
+                    api={createAPI(getToken)}
+                    max={8}
+                  />
                 </div>
 
-                {/* Video Intro URL */}
+                {/* Video’s (meerdere, ordenbaar) */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Video introductie (YouTube/Vimeo link)
-                  </label>
-                  <input
-                    type="url"
-                    value={media.video_intro_url}
-                    onChange={(e) => setMedia({...media, video_intro_url: e.target.value})}
-                    placeholder="https://youtube.com/watch?v=..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Video’s</label>
+                  <VideosUploader
+                    value={Array.isArray(media.videos) ? media.videos : []}
+                    onChange={async (urls) => {
+                      setMedia({ ...media, videos: urls });
+                      try {
+                        const api = createAPI(getToken);
+                        await api.riderProfile.createOrUpdate({ videos: urls, video_intro_url: (urls && urls[0]) ? urls[0] : '' });
+                      } catch (e) {
+                        console.warn('Autosave video’s mislukt:', e?.message || e);
+                      }
+                    }}
+                    api={createAPI(getToken)}
+                    maxItems={5}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Optioneel: Deel een korte video waarin je jezelf voorstelt
-                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Eerste video wordt als hoofdvideo gebruikt.</p>
                 </div>
 
                 {/* Profiel Samenvatting */}

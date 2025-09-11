@@ -348,6 +348,8 @@ export function transformProfileDataForAPI(profileData) {
 
   // Media
   add('photos', Array.isArray(media.photos) ? media.photos : []);
+  // videos: array zoals in HorseWizard; backend houdt ook legacy video_intro_url bij
+  add('videos', Array.isArray(media.videos) ? media.videos : []);
   add('video_intro_url', media.video_intro_url);
 
   return out;
@@ -514,6 +516,12 @@ export function transformProfileDataFromAPI(apiData) {
     },
     media: {
       photos: parseJSONArray(apiData.photos),
+      videos: (() => {
+        const arr = parseJSONArray(apiData.videos);
+        if (arr.length) return arr;
+        const single = apiData.video_intro || apiData.video_intro_url;
+        return single ? [single] : [];
+      })(),
       video_intro_url: apiData.video_intro || apiData.video_intro_url || ''
     }
   };

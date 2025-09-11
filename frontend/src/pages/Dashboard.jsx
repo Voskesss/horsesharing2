@@ -9,6 +9,7 @@ const Dashboard = () => {
   const api = createAPI(getToken);
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [riderPhotoUrl, setRiderPhotoUrl] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -40,13 +41,32 @@ const Dashboard = () => {
   const ctaPrimary = isOwner ? 'from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700' : 'from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700';
   const linkColor = isOwner ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700';
 
+  // Laad rider avatar wanneer rol 'rider' is
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (!isAuthenticated) return;
+        if (!isRider) { setRiderPhotoUrl(null); return; }
+        const rp = await api.riderProfile.get();
+        const arr = Array.isArray(rp?.photos) ? rp.photos : (Array.isArray(rp?.media?.photos) ? rp.media.photos : []);
+        if (mounted) setRiderPhotoUrl(arr && arr.length ? arr[0] : null);
+      } catch {
+        if (mounted) setRiderPhotoUrl(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [isAuthenticated, isRider]);
+
   return (
     <div className={`min-h-screen bg-gradient-to-br ${gradientFrom} py-8 md:py-12`}>
       <div className="max-w-6xl mx-auto px-4">
         {/* Hero (mobile-first) */}
         <div className="bg-white rounded-2xl shadow-xl p-5 md:p-8 flex flex-col gap-5">
           <div className="flex items-center gap-4">
-            {me?.owner_photo_url ? (
+            {(isRider && riderPhotoUrl) ? (
+              <img src={riderPhotoUrl} alt="profiel" className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing}`} />
+            ) : (me?.owner_photo_url) ? (
               <img src={me.owner_photo_url} alt="profiel" className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing}`} />
             ) : (
               <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl">🐎</div>

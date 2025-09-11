@@ -1186,6 +1186,7 @@ async def create_or_update_rider_profile(
             task_frequency=data.get('task_frequency') or '',
             photos=data.get('photos', []) or [],
             video_intro=data.get('video_intro_url') or '',
+            videos=(data.get('videos') or None),
             has_insurance=bool(data.get('insurance_coverage')),
             no_gos=json.dumps(data.get('no_gos', [])),
             health_limitations=json.dumps(data.get('health_restrictions', [])),
@@ -1303,6 +1304,7 @@ async def create_or_update_rider_profile(
         'no_gos': 'no_gos',
         'photos': 'photos',
         'video_intro_url': 'video_intro',
+        'videos': 'videos',
     }
 
     if existing_profile:
@@ -1503,6 +1505,7 @@ async def create_or_update_rider_profile(
             'task_frequency': 'task_frequency',
             'photos': 'photos',
             'video_intro_url': 'video_intro',
+            'videos': 'videos',
             'insurance_coverage': 'has_insurance',
             'health_restrictions': 'health_limitations',
             'no_gos': 'no_gos',
@@ -1753,6 +1756,7 @@ async def get_rider_profile(
         "insurance_coverage": profile.has_insurance,
         "no_gos": (json.loads(profile.no_gos) if isinstance(profile.no_gos, str) and profile.no_gos else []),
         "photos": profile.photos if profile.photos else [],
+        "videos": (profile.videos if getattr(profile, 'videos', None) is not None else ([] if not profile.video_intro else [profile.video_intro])),
         "video_intro_url": profile.video_intro,
         "parent_consent": profile.parent_consent,
         "parent_contact": profile.parent_contact,
