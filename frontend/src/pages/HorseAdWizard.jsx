@@ -84,6 +84,19 @@ export default function HorseAdWizard() {
     });
   };
 
+  // Auto-switch naar owner rol voor consistente themakleur als user beide profielen heeft
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await api.user.getMe();
+        if (me?.has_owner_profile && me?.has_rider_profile && me?.profile_type_chosen !== 'owner') {
+          await api.user.setRole('owner');
+        }
+      } catch (e) { /* stilhouden */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Stap 3: Kosten
   const [cost, setCost] = useState({ cost_model: 'per_maand', cost_amount: '' });
 
@@ -401,11 +414,11 @@ export default function HorseAdWizard() {
   const step1Ready = hasAdTypes && hasTitle && hasDesc && hasName && hasType && hasGender && hasAge && hasHeight && hasAddrCoreStep1 && hasPhotos;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 py-12 px-4">
+    <div className="min-h-screen bg-role-soft py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--role-primary)' }}>
               <span className="text-2xl">🐴</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900">{id ? 'Advertentie bewerken' : 'Nieuw Paard toevoegen'}</h1>
@@ -415,18 +428,18 @@ export default function HorseAdWizard() {
           {/* Progress */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-emerald-600">Stap {step} van {totalSteps}</span>
+              <span className="text-sm font-medium text-role">Stap {step} van {totalSteps}</span>
               <span className="text-sm text-gray-500">{Math.round((step / totalSteps) * 100)}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-emerald-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(step / totalSteps) * 100}%` }} />
+              <div className="h-2 rounded-full transition-all duration-300" style={{ width: `${(step / totalSteps) * 100}%`, backgroundColor: 'var(--role-primary)' }} />
             </div>
           </div>
 
           {step === 1 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>1</span>
                 Advertentie informatie
               </h2>
               {/* Advertentietype */}
@@ -450,7 +463,7 @@ export default function HorseAdWizard() {
                             : ([...(basic.ad_types || []), opt.key]);
                           setBasic({ ...basic, ad_types: next });
                         }}
-                        className={`px-3 py-1 rounded-full border text-sm ${selected ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                        className={`px-3 py-1 rounded-full border text-sm ${selected ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                       >
                         {`een ${opt.label} zoek`}
                       </button>
@@ -523,7 +536,7 @@ export default function HorseAdWizard() {
                     {key:'toilet_available', label:'Toilet'},
                     {key:'locker_available', label:'Zadel-/locker-kast'},
                   ].map(it => (
-                    <button key={it.key} type="button" onClick={()=> setFacilities(prev=> ({...prev, [it.key]: !prev[it.key]}))} className={`px-3 py-1 rounded-full border text-sm ${facilities[it.key] ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{it.label}</button>
+                    <button key={it.key} type="button" onClick={()=> setFacilities(prev=> ({...prev, [it.key]: !prev[it.key]}))} className={`px-3 py-1 rounded-full border text-sm ${facilities[it.key] ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{it.label}</button>
                   ))}
                 </div>
               </div>
@@ -543,7 +556,7 @@ export default function HorseAdWizard() {
           {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">2</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>2</span>
                 Beschikbaarheid
               </h2>
 
@@ -559,7 +572,7 @@ export default function HorseAdWizard() {
                             key={block}
                             type="button"
                             onClick={() => toggleBlock(day, block)}
-                            className={`px-3 py-1 rounded-full border text-sm ${selected ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                            className={`px-3 py-1 rounded-full border text-sm ${selected ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                           >
                             {block}
                           </button>
@@ -575,26 +588,26 @@ export default function HorseAdWizard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Min. dagen per week</label>
                   <input type="number" min={0} value={availability.min_days_per_week}
                     onChange={(e)=>setAvailability({...availability, min_days_per_week: Number(e.target.value)})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Sessieduur min (minuten)</label>
                   <input type="number" min={0} value={availability.session_duration_min}
                     onChange={(e)=>setAvailability({...availability, session_duration_min: Number(e.target.value)})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Sessieduur max (minuten, optioneel)</label>
                   <input type="number" min={0} value={availability.session_duration_max}
                     onChange={(e)=>setAvailability({...availability, session_duration_max: e.target.value === '' ? '' : Number(e.target.value)})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Taakfrequentie</label>
                   <input type="text" value={availability.task_frequency}
                     onChange={(e)=>setAvailability({...availability, task_frequency: e.target.value})}
                     placeholder="bijv. 2x per week verzorging"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
               </div>
             </div>
@@ -603,7 +616,7 @@ export default function HorseAdWizard() {
           {step === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">3</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>3</span>
                 Kosten
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -612,7 +625,7 @@ export default function HorseAdWizard() {
                   <div className="flex gap-3 flex-wrap">
                     {['per_maand','per_dag'].map(m => (
                       <button key={m} type="button" onClick={()=>setCost({...cost, cost_model: m})}
-                        className={`px-4 py-2 rounded-full border ${cost.cost_model===m ? 'bg-emerald-100 border-emerald-500 text-emerald-700':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{m.replace('_',' ')}</button>
+                        className={`px-4 py-2 rounded-full border ${cost.cost_model===m ? 'border-role text-role bg-role-soft':'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}>{m.replace('_',' ')}</button>
                     ))}
                   </div>
                 </div>
@@ -620,7 +633,7 @@ export default function HorseAdWizard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Bedrag (€)</label>
                   <input type="number" min={0} value={cost.cost_amount}
                     onChange={(e)=>setCost({...cost, cost_amount: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
                 </div>
               </div>
             </div>
@@ -629,7 +642,7 @@ export default function HorseAdWizard() {
           {step === 4 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center mr-2 text-sm">4</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>4</span>
                 Filters & Competenties
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
