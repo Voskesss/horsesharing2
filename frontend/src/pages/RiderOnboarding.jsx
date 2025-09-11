@@ -493,6 +493,8 @@ const RiderOnboarding = () => {
                     try {
                       const api = createAPI(getToken);
                       await api.riderProfile.createOrUpdate({ photos: one });
+                      // Notify listeners (e.g., Navbar) to refresh avatar
+                      window.dispatchEvent(new CustomEvent('profilePhotoUpdated', { detail: { role: 'rider' } }));
                     } catch (e) {
                       console.warn('Autosave profielfoto mislukt:', e?.message || e);
                     }

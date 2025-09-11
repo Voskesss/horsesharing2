@@ -31,6 +31,7 @@ class RiderProfile(Base):
     # Media
     photos = Column(JSON, nullable=True)  # Array of photo URLs
     video_intro = Column(String(500), nullable=True)  # Video URL
+    videos = Column(JSON, nullable=True)  # Array of video URLs
     
     # Location & Travel
     postcode = Column(String(10), nullable=False)
