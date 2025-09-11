@@ -49,6 +49,25 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
     onChange(next);
   }, [onChange, value]);
 
+  const makeCover = useCallback((idx) => {
+    if (!Array.isArray(value) || idx < 0 || idx >= value.length) return;
+    const arr = [...value];
+    const [item] = arr.splice(idx, 1);
+    arr.unshift(item);
+    onChange(arr);
+  }, [onChange, value]);
+
+  const move = useCallback((idx, dir) => {
+    if (!Array.isArray(value) || idx < 0 || idx >= value.length) return;
+    const target = idx + dir;
+    if (target < 0 || target >= value.length) return;
+    const arr = [...value];
+    const tmp = arr[target];
+    arr[target] = arr[idx];
+    arr[idx] = tmp;
+    onChange(arr);
+  }, [onChange, value]);
+
   const borderCls = dragOver ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 bg-white';
 
   return (
@@ -77,11 +96,22 @@ export default function ImageUploader({ value = [], onChange, api, max = 5 }) {
       </div>
 
       {Array.isArray(value) && value.length > 0 && (
-        <div className="mt-3 flex gap-2 flex-wrap">
+        <div className="mt-3 flex gap-3 flex-wrap">
           {value.map((url, idx) => (
             <div key={url+idx} className="relative">
-              <img src={url} alt="uploaded" className="w-20 h-20 object-cover rounded border" />
-              <button type="button" onClick={()=>removeAt(idx)} className="absolute -top-2 -right-2 bg-white border rounded-full px-2 text-sm">×</button>
+              {/* badge hoofdfoto */}
+              {idx === 0 && (
+                <span className="absolute -top-2 left-0 z-10 text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow">Hoofdfoto</span>
+              )}
+              <img src={url} alt="uploaded" className="w-24 h-24 object-cover rounded border" />
+              <div className="absolute -top-2 -right-2 flex gap-1">
+                <button type="button" onClick={()=>removeAt(idx)} title="Verwijderen" className="bg-white border rounded-full w-6 h-6 leading-none">×</button>
+              </div>
+              <div className="mt-1 flex items-center justify-center gap-1">
+                <button type="button" onClick={()=>move(idx, -1)} disabled={idx===0} title="Naar links" className={`px-2 py-0.5 text-xs rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-gray-700 border-gray-300 hover:bg-gray-50'}`}>←</button>
+                <button type="button" onClick={()=>makeCover(idx)} disabled={idx===0} title="Maak hoofdfoto" className={`px-2 py-0.5 text-xs rounded border ${idx===0 ? 'text-gray-400 border-gray-200' : 'text-emerald-700 border-emerald-300 hover:bg-emerald-50'}`}>Hoofd</button>
+                <button type="button" onClick={()=>move(idx, 1)} disabled={idx===value.length-1} title="Naar rechts" className={`px-2 py-0.5 text-xs rounded border ${idx===value.length-1 ? 'text-gray-400 border-gray-200' : 'text-gray-700 border-gray-300 hover:bg-gray-50'}`}>→</button>
+              </div>
             </div>
           ))}
         </div>
