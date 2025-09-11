@@ -116,13 +116,13 @@ const RiderProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-role-soft py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mr-4">
+              <div className="w-16 h-16 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: 'var(--role-primary)' }}>
                 <span className="text-2xl">🏇</span>
               </div>
               <div>
@@ -134,7 +134,7 @@ const RiderProfile = () => {
             </div>
             <button
               onClick={handleEditProfile}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="btn-role"
             >
               Profiel Bewerken
             </button>
@@ -145,13 +145,13 @@ const RiderProfile = () => {
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Profiel Volledigheid</h2>
-            <span className="text-2xl font-bold text-blue-600">{progressPercentage}%</span>
+            <span className="text-2xl font-bold text-role">{progressPercentage}%</span>
           </div>
           
           <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
             <div 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 h-3 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercentage}%` }}
+              className="h-3 rounded-full transition-all duration-300"
+              style={{ width: `${progressPercentage}%`, backgroundColor: 'var(--role-primary)' }}
             ></div>
           </div>
 
@@ -405,7 +405,7 @@ const RiderProfile = () => {
         <div className="mt-8 flex justify-center space-x-4">
           <button
             onClick={handleEditProfile}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="btn-role"
           >
             Profiel Bewerken
           </button>

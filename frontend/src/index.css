@@ -1,3 +1,50 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Role-based theming via CSS variables */
+:root {
+  --role-primary: #059669; /* emerald-600 default */
+  --role-primary-50: #ecfdf5; /* emerald-50 */
+  --role-accent: #0ea5e9; /* sky-500 */
+}
+
+body[data-role="rider"] {
+  --role-primary: #059669; /* emerald-600 */
+  --role-primary-50: #ecfdf5; /* emerald-50 */
+  --role-accent: #0ea5e9; /* sky-500 */
+}
+
+body[data-role="owner"] {
+  --role-primary: #d97706; /* amber-600 */
+  --role-primary-50: #fffbeb; /* amber-50 */
+  --role-accent: #f43f5e; /* rose-500 */
+}
+
+/* Utility helpers that read the variables */
+.text-role { color: var(--role-primary); }
+.bg-role-soft { background-color: var(--role-primary-50); }
+.border-role { border-color: var(--role-primary) !important; }
+
+.chip-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 9999px;
+  color: var(--role-primary);
+  background-color: var(--role-primary-50);
+  border: 1px solid var(--role-primary);
+}
+
+.btn-role {
+  background: var(--role-primary);
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+}
+.btn-role:hover { filter: brightness(0.95); }
+
+.link-role { color: var(--role-primary); }
+.link-role:hover { text-decoration: underline; filter: brightness(0.9); }

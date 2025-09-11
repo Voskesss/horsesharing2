@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createAPI } from '../utils/api';
@@ -26,87 +26,117 @@ const Dashboard = () => {
   if (!isAuthenticated) return null;
 
   const firstName = (me?.name || '').split(' ')[0] || 'Gebruiker';
+  const currentRole = useMemo(() => {
+    if (!me) return null;
+    if (me.profile_type_chosen) return me.profile_type_chosen;
+    if (me.has_owner_profile) return 'owner';
+    if (me.has_rider_profile) return 'rider';
+    return null;
+  }, [me]);
+  const isOwner = currentRole === 'owner';
+  const isRider = currentRole === 'rider';
+  const gradientFrom = isOwner ? 'from-amber-50 via-orange-50 to-rose-50' : 'from-emerald-50 via-teal-50 to-blue-50';
+  const accentRing = isOwner ? 'ring-amber-200' : 'ring-emerald-200';
+  const ctaPrimary = isOwner ? 'from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700' : 'from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700';
+  const linkColor = isOwner ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50 py-12">
+    <div className={`min-h-screen bg-gradient-to-br ${gradientFrom} py-8 md:py-12`}>
       <div className="max-w-6xl mx-auto px-4">
-        {/* Hero */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        {/* Hero (mobile-first) */}
+        <div className="bg-white rounded-2xl shadow-xl p-5 md:p-8 flex flex-col gap-5">
           <div className="flex items-center gap-4">
             {me?.owner_photo_url ? (
-              <img src={me.owner_photo_url} alt="profiel" className="w-16 h-16 rounded-full object-cover ring-2 ring-emerald-200" />
+              <img src={me.owner_photo_url} alt="profiel" className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing}`} />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-2xl">🐎</div>
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl">🐎</div>
             )}
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welkom, {firstName}</h1>
-              <p className="text-gray-600">Klaar om een advertentie te plaatsen of je profiel bij te werken?</p>
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-3xl font-bold text-gray-900 truncate">Welkom, {firstName}</h1>
+              <div className="text-sm text-gray-600">
+                Actief profiel: <span className={isOwner ? 'text-amber-700 font-medium' : 'text-emerald-700 font-medium'}>{isOwner ? 'Eigenaar' : 'Rijder'}</span>
+              </div>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            {me?.has_owner_profile && (
+
+          {/* Primair CTA-blok per rol */}
+          {isOwner && (
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => navigate('/owner/horses/new')}
-                className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold hover:from-emerald-700 hover:to-teal-700 shadow-lg"
+                className={`px-5 py-3 rounded-xl bg-gradient-to-r ${ctaPrimary} text-white font-semibold shadow-lg`}
               >
-                Advertentie voor paard/pony plaatsen
+                Advertentie plaatsen
               </button>
-            )}
-            {me?.has_owner_profile && (
-              <button
-                onClick={() => navigate('/owner/horses')}
-                className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50"
-              >
-                Mijn paarden
-              </button>
-            )}
-            <button
-              onClick={() => navigate('/owner/profile')}
-              className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50"
-            >
-              Mijn profiel
-            </button>
-          </div>
+              <button onClick={() => navigate('/owner/horses')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Mijn paarden</button>
+              <button onClick={() => navigate('/owner/profile')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Mijn eigenaar profiel</button>
+            </div>
+          )}
+          {isRider && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button onClick={() => navigate('/rider-profile')} className={`px-5 py-3 rounded-xl bg-gradient-to-r ${ctaPrimary} text-white font-semibold shadow-lg`}>Mijn rijdersprofiel</button>
+              <button onClick={() => navigate('/search') } className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50" disabled>Zoek advertenties (binnenkort)</button>
+              {!me?.has_owner_profile && (
+                <button onClick={() => navigate('/owner-onboarding')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Eigenaar profiel aanmaken</button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Quick actions */}
-        <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Quick actions per rol (mobile-first grid) */}
+        <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {isOwner && (
+            <>
+              <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3">📣</div>
+                <h3 className="font-semibold text-gray-900 mb-1">Advertentie plaatsen</h3>
+                <p className="text-sm text-gray-600 mb-3">Maak een nieuwe advertentie voor je paard of pony.</p>
+                <button onClick={()=>navigate('/owner/horses/new')} className={`text-sm font-medium ${linkColor}`}>Starten →</button>
+              </div>
+              <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
+                <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center mb-3">🐴</div>
+                <h3 className="font-semibold text-gray-900 mb-1">Mijn paarden</h3>
+                <p className="text-sm text-gray-600 mb-3">Beheer concepten en advertenties.</p>
+                <button onClick={()=>navigate('/owner/horses')} className={`text-sm font-medium ${linkColor}`}>Openen →</button>
+              </div>
+            </>
+          )}
+          {isRider && (
+            <>
+              <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">👤</div>
+                <h3 className="font-semibold text-gray-900 mb-1">Rijdersprofiel</h3>
+                <p className="text-sm text-gray-600 mb-3">Bekijk en werk je rijdersprofiel bij.</p>
+                <button onClick={()=>navigate('/rider-profile')} className={`text-sm font-medium ${linkColor}`}>Openen →</button>
+              </div>
+              <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">🔎</div>
+                <h3 className="font-semibold text-gray-900 mb-1">Zoek advertenties</h3>
+                <p className="text-sm text-gray-600 mb-3">Vind paarden die bij je passen.</p>
+                <button className="text-sm font-medium text-gray-400" disabled>Binnenkort →</button>
+              </div>
+            </>
+          )}
+          {/* Altijd aanwezig: profielen beheren */}
           <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
-            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">📣</div>
-            <h3 className="font-semibold text-gray-900 mb-1">Advertentie plaatsen</h3>
-            <p className="text-sm text-gray-600 mb-3">Maak een nieuwe advertentie voor je paard of pony.</p>
-            <button onClick={()=>navigate('/owner/horses/new')} className="text-emerald-600 text-sm font-medium hover:text-emerald-700">Starten →</button>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">👤</div>
-            <h3 className="font-semibold text-gray-900 mb-1">Mijn profiel</h3>
-            <p className="text-sm text-gray-600 mb-3">Bekijk en bewerk je eigenaar- of rijdersprofiel.</p>
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">⚙️</div>
+            <h3 className="font-semibold text-gray-900 mb-1">Profielen</h3>
+            <p className="text-sm text-gray-600 mb-3">Beheer je {isOwner ? 'eigenaar' : 'rijders'}profiel.
+              {!me?.has_owner_profile || !me?.has_rider_profile ? ' Maak ook het andere profiel aan.' : ''}
+            </p>
             <div className="flex gap-3">
-              <button onClick={()=>navigate('/owner/profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Eigenaar →</button>
-              <button onClick={()=>navigate('/rider-profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Rijder →</button>
+              {me?.has_owner_profile && <button onClick={()=>navigate('/owner/profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Eigenaar →</button>}
+              {me?.has_rider_profile && <button onClick={()=>navigate('/rider-profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Rijder →</button>}
+              {!me?.has_owner_profile && <button onClick={()=>navigate('/owner-onboarding')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Eigenaar aanmaken →</button>}
+              {!me?.has_rider_profile && <button onClick={()=>navigate('/rider-onboarding')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Rijder aanmaken →</button>}
             </div>
           </div>
-
-          <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
-            <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center mb-3">🐴</div>
-            <h3 className="font-semibold text-gray-900 mb-1">Mijn paarden</h3>
-            <p className="text-sm text-gray-600 mb-3">Bekijk en beheer je concepten en advertenties.</p>
-            <button onClick={()=>navigate('/owner/horses')} className="text-teal-600 text-sm font-medium hover:text-teal-700">Openen →</button>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mb-3">💬</div>
-            <h3 className="font-semibold text-gray-900 mb-1">Berichten</h3>
-            <p className="text-sm text-gray-600 mb-3">Chat met matches en plan afspraken.</p>
-            <button className="text-purple-600 text-sm font-medium hover:text-purple-700" disabled>Binnenkort →</button>
-          </div>
         </div>
 
-        {/* Info banner */}
-        <div className="mt-10 bg-white border border-emerald-100 rounded-xl p-5">
+        {/* Info banner met rol-kleur rand */}
+        <div className={`mt-8 md:mt-10 bg-white border ${isOwner ? 'border-amber-100' : 'border-emerald-100'} rounded-xl p-5`}>
           <h2 className="text-lg font-semibold text-gray-900">Tip</h2>
-          <p className="text-gray-600 text-sm mt-1">Zorg voor een duidelijke profielfoto en compleet adres voor betere reacties op je advertentie.</p>
+          <p className="text-gray-600 text-sm mt-1">Zorg voor een duidelijke profielfoto en compleet adres voor betere reacties.</p>
         </div>
       </div>
     </div>

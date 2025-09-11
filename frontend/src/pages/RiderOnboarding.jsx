@@ -444,7 +444,7 @@ const RiderOnboarding = () => {
           <div className="bg-white rounded-xl shadow-lg p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--role-primary)' }}>
                 <span className="text-2xl">🏇</span>
               </div>
               <h1 className="text-3xl font-bold text-gray-900">Ruiter Profiel</h1>
@@ -460,8 +460,8 @@ const RiderOnboarding = () => {
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
+                className="h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercentage}%`, backgroundColor: 'var(--role-primary)' }}
               ></div>
             </div>
           </div>
@@ -470,7 +470,7 @@ const RiderOnboarding = () => {
           {currentStep === 1 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>1</span>
                 Basis Informatie
               </h2>
               
@@ -644,7 +644,7 @@ const RiderOnboarding = () => {
                       onClick={() => toggleArrayItem(basicInfo.transport_options, option, (items) => setBasicInfo({...basicInfo, transport_options: items}))}
                       className={`p-2 text-sm rounded-lg border transition-colors ${
                         basicInfo.transport_options.includes(option)
-                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          ? 'border-role text-role bg-role-soft'
                           : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
@@ -662,7 +662,7 @@ const RiderOnboarding = () => {
           {currentStep === 2 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">2</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>2</span>
                 Beschikbaarheid
               </h2>
 
@@ -675,7 +675,8 @@ const RiderOnboarding = () => {
                       key={n}
                       type="button"
                       onClick={() => setAvailability({ ...availability, min_days_per_week: n })}
-                      className={`px-3 py-2 rounded-full border text-sm ${availability.min_days_per_week === n ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      className={`px-3 py-2 rounded-full border text-sm ${availability.min_days_per_week === n ? 'text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                      style={availability.min_days_per_week === n ? { backgroundColor: 'var(--role-primary)', borderColor: 'var(--role-primary)' } : undefined}
                     >
                       {n} dag{n>1?'en':''}
                     </button>
@@ -728,7 +729,7 @@ const RiderOnboarding = () => {
                         <button
                           type="button"
                           onClick={toggleDay}
-                          className={`w-28 px-3 py-2 rounded-lg border text-sm text-left ${active ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-700'}`}
+                          className={`w-28 px-3 py-2 rounded-lg border text-sm text-left ${active ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700'}`}
                         >
                           {day.charAt(0).toUpperCase() + day.slice(1)}
                         </button>
@@ -740,9 +741,10 @@ const RiderOnboarding = () => {
                               onClick={() => toggleBlock(block)}
                               className={`px-3 py-2 rounded-full border text-sm ${
                                 dayBlocks.includes(block)
-                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  ? 'text-white'
                                   : 'bg-white border-gray-300 text-gray-700'
                               } ${!active && !dayBlocks.includes(block) ? 'opacity-70' : ''}`}
+                              style={dayBlocks.includes(block) ? { backgroundColor: 'var(--role-primary)', borderColor: 'var(--role-primary)' } : undefined}
                             >
                               {block}
                             </button>
@@ -781,7 +783,7 @@ const RiderOnboarding = () => {
           {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">3</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>3</span>
                 Budget
               </h2>
 
@@ -814,7 +816,7 @@ const RiderOnboarding = () => {
           {currentStep === 7 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">7</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>7</span>
                 Ervaring
               </h2>
 
@@ -839,7 +841,7 @@ const RiderOnboarding = () => {
                           key={level}
                           type="button"
                           onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
-                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-amber-100 border-amber-500 text-amber-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                         >
                           {level}
                         </button>
@@ -854,7 +856,7 @@ const RiderOnboarding = () => {
                           key={level}
                           type="button"
                           onClick={() => toggleArrayItem(experience.certifications, level, (items) => setExperience({...experience, certifications: items}))}
-                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                          className={`px-2 py-1 text-xs rounded-full border ${experience.certifications.includes(level) ? 'border-role text-role bg-role-soft' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
                         >
                           {level}
                         </button>
@@ -984,9 +986,10 @@ const RiderOnboarding = () => {
                         })}
                         className={`px-3 py-2 rounded-full border text-sm transition-colors ${
                           active
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                            ? 'text-white shadow-sm'
+                            : 'bg-white border-gray-300 text-gray-700'
                         }`}
+                        style={active ? { backgroundColor: 'var(--role-primary)', borderColor: 'var(--role-primary)' } : undefined}
                       >
                         {item.label}
                       </button>
@@ -1014,7 +1017,7 @@ const RiderOnboarding = () => {
           {currentStep === 4 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">4</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>4</span>
                 Gewenste paard/pony
               </h2>
 
@@ -1232,7 +1235,7 @@ const RiderOnboarding = () => {
           {currentStep === 5 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">5</span>
+                <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>5</span>
                 Doelen
               </h2>
 

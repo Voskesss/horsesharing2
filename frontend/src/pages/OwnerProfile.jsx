@@ -37,13 +37,13 @@ const OwnerProfile = () => {
   const fullName = `${user.kinde_given_name || ''} ${user.kinde_family_name || ''}`.trim() || user.name || '';
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="min-h-screen bg-role-soft py-10 px-4">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         <div className="flex items-center gap-4">
           {profile.photo_url ? (
-            <img src={profile.photo_url} alt="profiel" className="w-20 h-20 rounded-full object-cover ring-2 ring-emerald-200" />
+            <img src={profile.photo_url} alt="profiel" className="w-20 h-20 rounded-full object-cover ring-2 border-role" />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center text-2xl">🐎</div>
+            <div className="w-20 h-20 rounded-full bg-role-soft flex items-center justify-center text-2xl">🐎</div>
           )}
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">{fullName || 'Mijn profiel'}</h1>
@@ -67,8 +67,8 @@ const OwnerProfile = () => {
         </div>
 
         <div className="mt-8 flex gap-3">
-          <Link to="/owner-onboarding" className="px-5 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Bewerken</Link>
-          <Link to="/owner/horses/new" className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Advertentie voor paard/pony plaatsen</Link>
+          <Link to="/owner-onboarding" className="btn-role">Bewerken</Link>
+          <Link to="/owner/horses/new" className="px-5 py-2 rounded-lg bg-white border border-role text-role hover:bg-role-soft">Advertentie voor paard/pony plaatsen</Link>
           <Link to="/dashboard" className="px-5 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200">Dashboard</Link>
         </div>
       </div>
