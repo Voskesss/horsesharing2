@@ -10,6 +10,8 @@ const Dashboard = () => {
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [riderPhotoUrl, setRiderPhotoUrl] = useState(null);
+  const [riderAvatarLoading, setRiderAvatarLoading] = useState(false);
+  const [riderAvatarLoaded, setRiderAvatarLoaded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -48,15 +50,24 @@ const Dashboard = () => {
       try {
         if (!isAuthenticated) return;
         if (!isRider) { setRiderPhotoUrl(null); return; }
+        setRiderAvatarLoading(true);
+        setRiderAvatarLoaded(false);
         const rp = await api.riderProfile.get();
         const arr = Array.isArray(rp?.photos) ? rp.photos : (Array.isArray(rp?.media?.photos) ? rp.media.photos : []);
         if (mounted) setRiderPhotoUrl(arr && arr.length ? arr[0] : null);
       } catch {
         if (mounted) setRiderPhotoUrl(null);
+      } finally {
+        if (mounted) setRiderAvatarLoading(false);
       }
     })();
     return () => { mounted = false; };
   }, [isAuthenticated, isRider]);
+
+  // Reset fade-in wanneer URL verandert
+  useEffect(() => {
+    setRiderAvatarLoaded(false);
+  }, [riderPhotoUrl]);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${gradientFrom} py-8 md:py-12`}>
@@ -64,8 +75,15 @@ const Dashboard = () => {
         {/* Hero (mobile-first) */}
         <div className="bg-white rounded-2xl shadow-xl p-5 md:p-8 flex flex-col gap-5">
           <div className="flex items-center gap-4">
-            {(isRider && riderPhotoUrl) ? (
-              <img src={riderPhotoUrl} alt="profiel" className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing}`} />
+            {(isRider && riderAvatarLoading) ? (
+              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-200 animate-pulse`} />
+            ) : (isRider && riderPhotoUrl) ? (
+              <img
+                src={riderPhotoUrl}
+                alt="profiel"
+                onLoad={() => setRiderAvatarLoaded(true)}
+                className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing} transition-opacity duration-300 ${riderAvatarLoaded ? 'opacity-100' : 'opacity-0'}`}
+              />
             ) : (me?.owner_photo_url) ? (
               <img src={me.owner_photo_url} alt="profiel" className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing}`} />
             ) : (
