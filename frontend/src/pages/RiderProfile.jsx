@@ -12,6 +12,7 @@ const RiderProfile = () => {
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
   const [publishing, setPublishing] = useState(false);
+  const [toast, setToast] = useState({ visible: false, type: 'success', message: '' });
 
   if (!isAuthenticated) {
     navigate('/');
@@ -99,6 +100,13 @@ const RiderProfile = () => {
     fetchProfileData();
   }, [user]);
 
+  // Auto-hide toast
+  useEffect(() => {
+    if (!toast.visible) return;
+    const t = setTimeout(() => setToast({ ...toast, visible: false }), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -122,6 +130,7 @@ const RiderProfile = () => {
       await api.user.completeOnboarding('rider');
       const meData = await api.user.getMe();
       setMe(meData);
+      setToast({ visible: true, type: 'success', message: 'Profiel gepubliceerd' });
     } catch (e) {
       // noop; kan mislukken
     } finally {
@@ -135,6 +144,7 @@ const RiderProfile = () => {
       await api.user.setPublished('rider', false);
       const meData = await api.user.getMe();
       setMe(meData);
+      setToast({ visible: true, type: 'info', message: 'Teruggezet naar concept. Bewerken weer mogelijk.' });
     } catch (e) {
       // noop
     } finally {
@@ -294,6 +304,11 @@ const RiderProfile = () => {
   return (
     <div className="min-h-screen bg-role-soft py-8">
       <div className="max-w-4xl mx-auto px-4">
+        {toast.visible && (
+          <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm ${toast.type==='success' ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-white'}`}>
+            {toast.message}
+          </div>
+        )}
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
@@ -331,12 +346,14 @@ const RiderProfile = () => {
                   {publishing ? 'Bezig…' : 'Naar concept'}
                 </button>
               )}
-              <button
-                onClick={handleEditProfile}
-                className="btn-role"
-              >
-                Profiel Bewerken
-              </button>
+              {!isPublished && (
+                <button
+                  onClick={handleEditProfile}
+                  className="btn-role"
+                >
+                  Profiel Bewerken
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -386,6 +403,28 @@ const RiderProfile = () => {
             </div>
           )}
         </div>
+
+        {isPublished && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-4 mb-6">
+            Je profiel is gepubliceerd. Bewerken is uitgeschakeld. Zet terug naar concept om wijzigingen te maken.
+          </div>
+        )}
+
+        {!isPublished && isPublishable && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-4 mb-6 flex items-center justify-between">
+            <div>
+              <div className="font-semibold">Je profiel is klaar om te publiceren</div>
+              <div className="text-sm opacity-90">Maak je profiel zichtbaar voor eigenaren. Je kunt altijd terug naar concept.</div>
+            </div>
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              className={`px-4 py-2 rounded-lg text-white ${publishing ? 'bg-gray-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'} transition-colors`}
+            >
+              {publishing ? 'Bezig…' : 'Publiceren'}
+            </button>
+          </div>
+        )}
 
         
 
@@ -460,7 +499,12 @@ const RiderProfile = () => {
                     <li key={i}>• {line}</li>
                   ))}
                 </ul>
-                <button onClick={() => handleCompleteStep(t.step)} className="text-sm text-role font-medium hover:underline">
+                <button
+                  onClick={() => !isPublished && handleCompleteStep(t.step)}
+                  disabled={isPublished}
+                  title={isPublished ? 'Profiel is gepubliceerd; zet terug naar concept om te bewerken' : 'Bewerken'}
+                  className={`text-sm font-medium ${isPublished ? 'text-gray-400 cursor-not-allowed' : 'text-role hover:underline'}`}
+                >
                   Bewerken →
                 </button>
               </div>
@@ -472,12 +516,14 @@ const RiderProfile = () => {
 
         {/* Action Buttons */}
         <div className="mt-8 flex justify-center space-x-4">
-          <button
-            onClick={handleEditProfile}
-            className="btn-role"
-          >
-            Profiel Bewerken
-          </button>
+          {!isPublished && (
+            <button
+              onClick={handleEditProfile}
+              className="btn-role"
+            >
+              Profiel Bewerken
+            </button>
+          )}
           <button
             onClick={() => navigate('/dashboard')}
             className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"

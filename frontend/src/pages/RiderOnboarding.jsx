@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
@@ -17,13 +17,31 @@ const RiderOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   // Simple toast state
-  const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
+  const [toast, setToast] = useState({ visible: false, type: 'info', message: '' });
   const totalSteps = 10;
 
   if (!isAuthenticated) {
     navigate('/');
     return null;
   }
+
+  // Blokkeer onboarding als profiel al gepubliceerd is (redirect naar profiel)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const api = createAPI(getToken);
+        const me = await api.user.getMe();
+        if (!mounted) return;
+        if (me?.onboarding_completed) {
+          navigate('/rider-profile?blocked=published');
+        }
+      } catch {
+        // stilhouden
+      }
+    })();
+    return () => { mounted = false; };
+  }, [getToken, navigate]);
 
   // Basis informatie
   const [basicInfo, setBasicInfo] = useState({

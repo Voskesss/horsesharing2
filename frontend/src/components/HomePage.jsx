@@ -50,13 +50,30 @@ const HomePage = () => {
           />
           {/* Vignette/gradient overlay for readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+          {/* Organische wave overlay aan de rechterkant voor minder 'standaard' look */}
+          <svg
+            className="absolute right-0 top-0 h-full w-[42%] hidden md:block"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M0,0 L100,0 L100,100 C70,90 60,80 45,75 C30,70 20,70 0,65 Z"
+              fill="white"
+              fillOpacity="0.92"
+            />
+          </svg>
+          {/* Subtiele paard watermark linksboven */}
+          <div className="absolute left-4 sm:left-8 top-6 sm:top-8 text-white/20 sm:text-white/15 select-none" style={{fontSize:'5rem', lineHeight:1}}>
+            🐎
+          </div>
         </div>
 
         {/* Gradient fallback for XS screens */}
         <div className="absolute inset-0 sm:hidden bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50" />
 
         <div className="relative max-w-7xl mx-auto px-4 py-20 sm:py-32">
-          <div className="text-center">
+          <div className="text-center md:text-left md:pl-8">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
               <span className="bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 bg-clip-text text-transparent drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">HorseSharing</span>
               <br />
@@ -67,12 +84,12 @@ const HomePage = () => {
                 </span>
               </span>
             </h1>
-            <p className="text-xl sm:text-2xl text-white/95 sm:text-gray-100 mb-12 max-w-3xl mx-auto leading-relaxed drop-shadow-[0_1px_4px_rgba(0,0,0,0.35)]">
+            <p className="text-xl sm:text-2xl text-white/95 sm:text-gray-100 mb-12 max-w-3xl md:max-w-xl md:ml-0 mx-auto leading-relaxed drop-shadow-[0_1px_4px_rgba(0,0,0,0.35)]">
               Het eerste centrale platform voor bijrijders en paardeneigenaren. 
               <span className="font-semibold text-emerald-200 sm:text-emerald-600"> Betere matching, meer bereik, minder moeite.</span>
             </p>
             {!isAuthenticated ? (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-4 md:justify-start justify-center items-center">
                 <button
                   onClick={login}
                   className="group bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
@@ -89,7 +106,7 @@ const HomePage = () => {
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-4 md:justify-start justify-center items-center">
                 <Link
                   to="/profile-choice"
                   className="group bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
