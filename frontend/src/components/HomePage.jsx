@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createAPI } from '../utils/api';
+import heroVideo from '../assets/watermarked_preview.mp4';
 
 const HomePage = () => {
   const { login, isAuthenticated, getToken } = useKindeAuth();
@@ -34,24 +35,41 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section with Gradient */}
-      <div className="relative bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 overflow-hidden">
-        <div className="absolute inset-0 bg-white/70"></div>
+      {/* Hero Section with Cinematic Video Background */}
+      <section className="relative overflow-hidden">
+        {/* Video background (hidden on very small screens) */}
+        <div className="absolute inset-0 hidden sm:block">
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            src={heroVideo}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+          />
+          {/* Vignette/gradient overlay for readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
+        </div>
+
+        {/* Gradient fallback for XS screens */}
+        <div className="absolute inset-0 sm:hidden bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50" />
+
         <div className="relative max-w-7xl mx-auto px-4 py-20 sm:py-32">
           <div className="text-center">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              <span className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">HorseSharing</span>
+              <span className="bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 bg-clip-text text-transparent drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">HorseSharing</span>
               <br />
-              <span className="text-gray-800">e‑Matching tussen paard en </span>
+              <span className="text-white sm:text-gray-100 drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">e‑Matching tussen paard en </span>
               <span className="inline-block min-w-[10ch]">
-                <span className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent animate-pulse">
+                <span className="bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent animate-pulse drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
                   {roles[roleIndex]}
                 </span>
               </span>
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-700 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl sm:text-2xl text-white/95 sm:text-gray-100 mb-12 max-w-3xl mx-auto leading-relaxed drop-shadow-[0_1px_4px_rgba(0,0,0,0.35)]">
               Het eerste centrale platform voor bijrijders en paardeneigenaren. 
-              <span className="font-semibold text-emerald-600"> Betere matching, meer bereik, minder moeite.</span>
+              <span className="font-semibold text-emerald-200 sm:text-emerald-600"> Betere matching, meer bereik, minder moeite.</span>
             </p>
             {!isAuthenticated ? (
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -66,7 +84,7 @@ const HomePage = () => {
                     </svg>
                   </span>
                 </button>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-white/90 sm:text-gray-200">
                   ✨ Gratis tot je eerste succesvolle match
                 </p>
               </div>
@@ -86,7 +104,7 @@ const HomePage = () => {
                 {me?.has_rider_profile && (
                   <Link
                     to="/rider-profile"
-                    className="text-emerald-700 hover:text-emerald-800 font-semibold"
+                    className="text-emerald-200 hover:text-emerald-100 sm:text-emerald-700 sm:hover:text-emerald-800 font-semibold"
                   >
                     Naar mijn profiel →
                   </Link>
@@ -95,12 +113,7 @@ const HomePage = () => {
             )}
           </div>
         </div>
-        
-        {/* Decorative Elements */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-emerald-200 rounded-full opacity-60 animate-pulse"></div>
-        <div className="absolute top-32 right-20 w-16 h-16 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000"></div>
-        <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-purple-200 rounded-full opacity-60 animate-pulse delay-2000"></div>
-      </div>
+      </section>
 
       {/* Why HorseSharing Section */}
       <div className="py-20 bg-white">

@@ -129,6 +129,19 @@ const RiderProfile = () => {
     }
   };
 
+  const handleUnpublish = async () => {
+    try {
+      setPublishing(true);
+      await api.user.setPublished('rider', false);
+      const meData = await api.user.getMe();
+      setMe(meData);
+    } catch (e) {
+      // noop
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const handleEditProfile = () => {
     navigate('/rider-onboarding');
   };
@@ -299,7 +312,7 @@ const RiderProfile = () => {
               <span className={`text-xs px-2 py-1 rounded-full border ${isPublished ? 'bg-green-50 border-green-300 text-green-700' : 'bg-yellow-50 border-yellow-300 text-yellow-700'}`}>
                 {isPublished ? 'Gepubliceerd' : 'Concept'}
               </span>
-              {!isPublished && (
+              {!isPublished ? (
                 <button
                   onClick={handlePublish}
                   disabled={!isPublishable || publishing}
@@ -307,6 +320,15 @@ const RiderProfile = () => {
                   className={`px-4 py-2 rounded-lg text-white ${(!isPublishable || publishing) ? 'bg-gray-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'} transition-colors`}
                 >
                   {publishing ? 'Publiceren…' : 'Publiceren'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleUnpublish}
+                  disabled={publishing}
+                  title="Zet terug naar concept"
+                  className={`px-4 py-2 rounded-lg text-white ${publishing ? 'bg-gray-300 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-700'} transition-colors`}
+                >
+                  {publishing ? 'Bezig…' : 'Naar concept'}
                 </button>
               )}
               <button

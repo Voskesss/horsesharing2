@@ -297,6 +297,25 @@ async def complete_onboarding(
     
     return {"message": "Onboarding completed", "profile_type": profile_type}
 
+
+@app.post("/auth/set-published")
+async def set_published(
+    published: bool,
+    profile_type: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Zet publicatiestatus (onboarding_completed) aan/uit. Optioneel profile_type updaten.
+    Dit is een eenvoudige vlag voor zichtbaarheid tot we een aparte is_published veld introduceren.
+    """
+    current_user.onboarding_completed = bool(published)
+    if profile_type:
+        current_user.profile_type_chosen = profile_type
+    db.commit()
+    db.refresh(current_user)
+    return {"message": "Published status updated", "published": current_user.onboarding_completed,
+            "profile_type": current_user.profile_type_chosen}
+
 # Pydantic models voor request/response
 class RiderProfileCreate(BaseModel):
     # Basis informatie - allemaal optioneel voor tussentijds opslaan

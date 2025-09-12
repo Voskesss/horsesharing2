@@ -154,9 +154,20 @@ export const createAPI = (getToken) => ({
     // Voltooi onboarding
     async completeOnboarding(profileType) {
       const token = await getToken();
-      return apiCall('/auth/complete-onboarding', {
+      // Backend verwacht momenteel profile_type als query param i.p.v. JSON body
+      const qs = encodeURIComponent(profileType || '');
+      return apiCall(`/auth/complete-onboarding?profile_type=${qs}`, {
         method: 'POST',
-        body: JSON.stringify({ profile_type: profileType }),
+      }, token);
+    },
+
+    // Zet publicatiestatus (concept/published)
+    async setPublished(profileType, published) {
+      const token = await getToken();
+      const qsType = encodeURIComponent(profileType || '');
+      const qsPub = encodeURIComponent(String(!!published));
+      return apiCall(`/auth/set-published?published=${qsPub}&profile_type=${qsType}`, {
+        method: 'POST',
       }, token);
     },
 
