@@ -226,12 +226,25 @@ const RiderOnboarding = () => {
     const loadExistingProfile = async () => {
       try {
         const api = createAPI(getToken);
-        const apiData = await api.riderProfile.get();
+        let hasServerProfile = true;
+        let apiData = null;
+        try {
+          apiData = await api.riderProfile.get();
+        } catch (e) {
+          const msg = (e && e.message ? String(e.message).toLowerCase() : '');
+          if (msg.includes('not found') || msg.includes('rider profile not found') || msg.includes('404')) {
+            hasServerProfile = false;
+          } else {
+            throw e;
+          }
+        }
         
-        console.log('🔍 RAW API DATA:', JSON.stringify(apiData, null, 2));
-        console.log('📥 GET /rider-profile min_days_per_week =', apiData.min_days_per_week);
+        if (hasServerProfile && apiData) {
+          console.log('🔍 RAW API DATA:', JSON.stringify(apiData, null, 2));
+          console.log('📥 GET /rider-profile min_days_per_week =', apiData.min_days_per_week);
+        }
         
-        const transformedData = transformProfileDataFromAPI(apiData);
+        const transformedData = hasServerProfile && apiData ? transformProfileDataFromAPI(apiData) : transformProfileDataFromAPI({});
         
         console.log('🔄 TRANSFORMED DATA:', JSON.stringify(transformedData, null, 2));
         
@@ -246,17 +259,19 @@ const RiderOnboarding = () => {
         setLease(transformedData.lease || { wants_lease: false, budget_max_pm_lease: undefined });
         setPreferences(transformedData.preferences);
         setMedia(transformedData.media);
-        // Prefill profielfoto vanuit owner als rider nog geen foto heeft (eenmalig)
-        try {
-          const me = await api.user.getMe();
-          const ownerUrl = me?.owner_photo_url || '';
-          const prefillKey = `rider_prefill_owner_avatar_done_${me?.id || 'anon'}`;
-          const already = localStorage.getItem(prefillKey) === '1';
-          if ((!Array.isArray(transformedData.media.photos) || transformedData.media.photos.length === 0) && ownerUrl && !already) {
-            setMedia({ photos: [ownerUrl], videos: transformedData.media.videos || [], video_intro_url: transformedData.media.video_intro_url || '' });
-            localStorage.setItem(prefillKey, '1');
-          }
-        } catch {}
+        // Prefill alleen als er géén ruiterprofiel bestaat (404)
+        if (!hasServerProfile) {
+          try {
+            const me = await api.user.getMe();
+            const ownerUrl = me?.owner_photo_url || '';
+            const prefillKey = `rider_prefill_owner_avatar_done_${me?.id || 'anon'}`;
+            const already = localStorage.getItem(prefillKey) === '1';
+            if ((!Array.isArray(transformedData.media.photos) || transformedData.media.photos.length === 0) && ownerUrl && !already) {
+              setMedia({ photos: [ownerUrl], videos: transformedData.media.videos || [], video_intro_url: transformedData.media.video_intro_url || '' });
+              localStorage.setItem(prefillKey, '1');
+            }
+          } catch {}
+        }
         
         console.log('✅ Profile state updated successfully');
         console.log('📋 Current basicInfo state:', transformedData.basicInfo);
