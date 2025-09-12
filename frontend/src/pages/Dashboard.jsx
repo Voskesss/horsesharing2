@@ -75,17 +75,25 @@ const Dashboard = () => {
         {/* Hero (mobile-first) */}
         <div className="bg-white rounded-2xl shadow-xl p-5 md:p-8 flex flex-col gap-5">
           <div className="flex items-center gap-4">
-            {(isRider && riderAvatarLoading) ? (
-              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-200 animate-pulse`} />
-            ) : (isRider && riderPhotoUrl) ? (
-              <img
-                src={riderPhotoUrl}
-                alt="profiel"
-                onLoad={() => setRiderAvatarLoaded(true)}
-                className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing} transition-opacity duration-300 ${riderAvatarLoaded ? 'opacity-100' : 'opacity-0'}`}
-              />
-            ) : (me?.owner_photo_url) ? (
-              <img src={me.owner_photo_url} alt="profiel" className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing}`} />
+            {isRider ? (
+              riderAvatarLoading ? (
+                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-200 animate-pulse`} />
+              ) : riderPhotoUrl ? (
+                <img
+                  src={riderPhotoUrl}
+                  alt="profiel"
+                  onLoad={() => setRiderAvatarLoaded(true)}
+                  className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing} transition-opacity duration-300 ${riderAvatarLoaded ? 'opacity-100' : 'opacity-0'}`}
+                />
+              ) : (
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl">🐎</div>
+              )
+            ) : isOwner ? (
+              me?.owner_photo_url ? (
+                <img src={me.owner_photo_url} alt="profiel" className={`w-14 h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ${accentRing}`} />
+              ) : (
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl">🐎</div>
+              )
             ) : (
               <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center text-2xl">🐎</div>
             )}
