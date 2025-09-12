@@ -193,21 +193,31 @@ export const getIncompleteSteps = (profileData) => {
   // 3: Budget
   if (!(Number(budget.budget_min_euro)>0 && Number(budget.budget_max_euro)>0)) incompleteSteps.push({ step: 3, title: 'Budget' });
 
-  // 4: Ervaring & Activiteiten
-  if (!((Number(experience.experience_years)>0) || !!experience.activity_mode || (Array.isArray(experience.activity_preferences) && experience.activity_preferences.length>0))) incompleteSteps.push({ step: 4, title: 'Ervaring & Activiteiten' });
+  // 4: Gewenste paard/pony (type én (hoogte of maat-categorie))
+  {
+    const dh = (preferences && preferences.desired_horse) || {};
+    const hasType = Array.isArray(dh.type) && dh.type.length > 0;
+    const hasHeight = (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) || (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null);
+    const hasSizeCats = Array.isArray(dh.size_categories) && dh.size_categories.length > 0;
+    const desiredOk = hasType && (hasHeight || hasSizeCats);
+    if (!desiredOk) incompleteSteps.push({ step: 4, title: 'Gewenste paard/pony' });
+  }
 
-  // 5: Doelen & Disciplines
-  if (!((Array.isArray(goals.riding_goals) && goals.riding_goals.length>0) || (Array.isArray(goals.discipline_preferences) && goals.discipline_preferences.length>0))) incompleteSteps.push({ step: 5, title: 'Doelen & Disciplines' });
+  // 5: Doelen & Disciplines (alleen verplicht als rijden in scope)
+  {
+    const rideInScope = experience.activity_mode === 'ride_only' || experience.activity_mode === 'ride_or_care';
+    const goalsOk = (Array.isArray(goals.riding_goals) && goals.riding_goals.length>0) || (Array.isArray(goals.discipline_preferences) && goals.discipline_preferences.length>0);
+    if (rideInScope && !goalsOk) incompleteSteps.push({ step: 5, title: 'Doelen & Disciplines' });
+  }
 
-  // 6: Vaardigheden
-  if (!(Array.isArray(skills.general_skills) && skills.general_skills.length>0)) incompleteSteps.push({ step: 6, title: 'Vaardigheden' });
+  // 6: Taken
+  if (!((Array.isArray(tasks.willing_tasks) && tasks.willing_tasks.length>0) || !!tasks.task_frequency)) incompleteSteps.push({ step: 6, title: 'Taken' });
 
-  // 7: Lease-voorkeuren
-  const leaseKeys = lease && typeof lease==='object' ? Object.keys(lease).filter(k=> lease[k]!==null && lease[k]!==undefined && lease[k]!=='' ) : [];
-  if (!(leaseKeys.length>0)) incompleteSteps.push({ step: 7, title: 'Lease-voorkeuren' });
+  // 7: Ervaring & Activiteiten
+  if (!((Number(experience.experience_years)>0) || !!experience.activity_mode || (Array.isArray(experience.activity_preferences) && experience.activity_preferences.length>0))) incompleteSteps.push({ step: 7, title: 'Ervaring & Activiteiten' });
 
-  // 8: Taken
-  if (!((Array.isArray(tasks.willing_tasks) && tasks.willing_tasks.length>0) || !!tasks.task_frequency)) incompleteSteps.push({ step: 8, title: 'Taken' });
+  // 8: Vaardigheden
+  if (!(Array.isArray(skills.general_skills) && skills.general_skills.length>0)) incompleteSteps.push({ step: 8, title: 'Vaardigheden' });
 
   // 9: Voorkeuren
   const hasHealth = Array.isArray(preferences.health_restrictions) && preferences.health_restrictions.length>0;
