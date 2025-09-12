@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
 import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
@@ -9,6 +9,7 @@ import VideosUploader from '../components/VideosUploader';
 const RiderOnboarding = () => {
   const navigate = useNavigate();
   const { isAuthenticated, getToken } = useKindeAuth();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   // Simple toast state
@@ -223,6 +224,15 @@ const RiderOnboarding = () => {
 
   // Load existing profile data on component mount
   useEffect(() => {
+    // Lees ?step= uit de URL bij load en wanneer de URL verandert
+    try {
+      const sp = new URLSearchParams(location.search || '');
+      const s = parseInt(sp.get('step') || '');
+      if (!Number.isNaN(s) && s >= 1 && s <= totalSteps) {
+        setCurrentStep(s);
+      }
+    } catch {}
+
     const loadExistingProfile = async () => {
       try {
         const api = createAPI(getToken);
@@ -286,7 +296,7 @@ const RiderOnboarding = () => {
     };
 
     loadExistingProfile();
-  }, [getToken]);
+  }, [getToken, location.search]);
 
   // Prefill naam/telefoon vanuit Kinde (auth/me) zonder bestaande invoer te overschrijven
   useEffect(() => {

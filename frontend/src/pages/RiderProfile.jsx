@@ -125,6 +125,98 @@ const RiderProfile = () => {
     navigate(`/rider-onboarding?step=${stepNumber}`);
   };
 
+  // Helpers voor tegel-status en samenvatting
+  const tiles = [
+    {
+      step: 1,
+      title: 'Basisinformatie',
+      complete: !!(profileData.basicInfo.first_name && profileData.basicInfo.postcode),
+      summary: [
+        `${profileData.basicInfo.first_name || ''} ${profileData.basicInfo.last_name || ''}`.trim() || 'Naam: n.v.t.',
+        profileData.basicInfo.postcode ? `Postcode: ${profileData.basicInfo.postcode}` : 'Postcode: n.v.t.',
+        (Array.isArray(profileData.media.photos) && profileData.media.photos.length>0) ? 'Profielfoto: aanwezig' : 'Profielfoto: ontbreekt',
+      ],
+    },
+    {
+      step: 2,
+      title: 'Beschikbaarheid',
+      complete: (profileData.availability.available_days?.length>0),
+      summary: [
+        `Dagen: ${profileData.availability.available_days?.slice(0,3).join(', ') || 'n.v.t.'}`,
+        `Blokken: ${profileData.availability.available_time_blocks?.slice(0,3).join(', ') || 'n.v.t.'}`,
+      ],
+    },
+    {
+      step: 3,
+      title: 'Budget',
+      complete: (typeof profileData.budget.budget_min_euro==='number' && typeof profileData.budget.budget_max_euro==='number'),
+      summary: [
+        `€${profileData.budget.budget_min_euro} - €${profileData.budget.budget_max_euro}`,
+      ],
+    },
+    {
+      step: 4,
+      title: 'Ervaring & Activiteiten',
+      complete: (typeof profileData.experience.experience_years==='number' && profileData.experience.experience_years>0) || (Array.isArray(profileData.experience.activity_preferences) && profileData.experience.activity_preferences.length>0) || !!profileData.experience.activity_mode,
+      summary: [
+        `Ervaring: ${profileData.experience.experience_years || 0} jaar`,
+        profileData.experience.activity_mode ? `Modus: ${profileData.experience.activity_mode}` : 'Modus: n.v.t.',
+      ],
+    },
+    {
+      step: 5,
+      title: 'Doelen & Disciplines',
+      complete: (profileData.goals.riding_goals?.length>0 || profileData.goals.discipline_preferences?.length>0),
+      summary: [
+        `Doelen: ${(profileData.goals.riding_goals||[]).slice(0,3).join(', ') || 'n.v.t.'}`,
+        `Disciplines: ${(profileData.goals.discipline_preferences||[]).slice(0,3).join(', ') || 'n.v.t.'}`,
+      ],
+    },
+    {
+      step: 6,
+      title: 'Vaardigheden',
+      complete: (profileData.skills?.general_skills?.length>0),
+      summary: [
+        `Skills: ${(profileData.skills?.general_skills||[]).slice(0,4).join(', ') || 'n.v.t.'}`,
+      ],
+    },
+    {
+      step: 7,
+      title: 'Lease-voorkeuren',
+      complete: !!profileData.lease?.wants_lease || (profileData.lease && Object.keys(profileData.lease).length>0),
+      summary: [
+        profileData.lease?.wants_lease ? 'Lease: ja' : 'Lease: n.v.t.',
+        (profileData.lease?.budget_max_pm_lease!=null) ? `Max: €${profileData.lease.budget_max_pm_lease}/mnd` : 'Budget: n.v.t.',
+      ],
+    },
+    {
+      step: 8,
+      title: 'Taken',
+      complete: (profileData.tasks.willing_tasks?.length>0 || !!profileData.tasks.task_frequency),
+      summary: [
+        `Taken: ${(profileData.tasks.willing_tasks||[]).slice(0,4).join(', ') || 'n.v.t.'}`,
+        `Frequentie: ${profileData.tasks.task_frequency || 'n.v.t.'}`,
+      ],
+    },
+    {
+      step: 9,
+      title: 'Voorkeuren',
+      complete: (Array.isArray(profileData.preferences.health_restrictions) && profileData.preferences.health_restrictions.length>0) || (Array.isArray(profileData.preferences.no_gos) && profileData.preferences.no_gos.length>0) || (profileData.preferences.material_preferences && Object.keys(profileData.preferences.material_preferences).length>0),
+      summary: [
+        `No-go's: ${(profileData.preferences.no_gos||[]).slice(0,3).join(', ') || 'n.v.t.'}`,
+      ],
+    },
+    {
+      step: 10,
+      title: 'Media',
+      complete: (profileData.media.photos?.length>0 || (Array.isArray(profileData.media.videos) && profileData.media.videos.length>0) || !!profileData.media.video_intro_url),
+      summary: [
+        `Foto's: ${profileData.media.photos?.length || 0}`,
+        `Video's: ${(Array.isArray(profileData.media.videos)? profileData.media.videos.length : (profileData.media.video_intro_url?1:0))}`,
+      ],
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-role-soft py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -199,52 +291,84 @@ const RiderProfile = () => {
 
         
 
-        {/* Media Section */}
-        {(profileData.media.photos.length > 0 || profileData.media.video_intro_url) && (
+        {/* Media Section (foto's en video's zichtbaar) */}
+        {(profileData.media.photos.length > 0 || profileData.media.video_intro_url || (Array.isArray(profileData.media.videos) && profileData.media.videos.length>0)) && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Media</h3>
-            
+
             {/* Foto's */}
             {profileData.media.photos.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Profiel foto's</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Foto's</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {profileData.media.photos.map((photo, index) => (
-                    <div key={index} className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                      <div className="text-center">
-                        <span className="text-2xl mb-1 block">📷</span>
-                        <span className="text-xs text-gray-500">{photo}</span>
-                      </div>
-                    </div>
+                    <img key={index} src={photo} alt={`foto-${index}`} className="aspect-square object-cover rounded-lg border" />
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Video */}
-            {profileData.media.video_intro_url && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Video introductie</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <span className="text-2xl mr-3">🎥</span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Video introductie</p>
-                      <a 
-                        href={profileData.media.video_intro_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:text-blue-800 underline"
-                      >
-                        Bekijk video
-                      </a>
-                    </div>
+            {/* Video's */}
+            {(() => {
+              const videos = Array.isArray(profileData.media.videos) ? profileData.media.videos : [];
+              const legacy = profileData.media.video_intro_url && !videos.includes(profileData.media.video_intro_url) ? [profileData.media.video_intro_url] : [];
+              const all = [...videos, ...legacy];
+              if (all.length === 0) return null;
+              return (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Video's</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {all.map((url, idx) => (
+                      url.match(/\.(mp4|mov|webm)(\?|$)/i) ? (
+                        <video key={idx} src={url} controls className="w-full rounded-lg border bg-black/5" />
+                      ) : (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block p-3 rounded-lg border hover:bg-gray-50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center">🎥</div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">Externe video</div>
+                              <div className="text-xs text-blue-600 underline break-all">{url}</div>
+                            </div>
+                          </div>
+                        </a>
+                      )
+                    ))}
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
+
+        {/* Tegel-overzicht per onboarding stap */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Jouw profielonderdelen</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {tiles.map(t => (
+              <div key={t.step} className="border rounded-lg p-4 hover:shadow-sm transition">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 text-xs rounded-full flex items-center justify-center text-white" style={{ backgroundColor: 'var(--role-primary)' }}>{t.step}</span>
+                    <h4 className="font-medium text-gray-900">{t.title}</h4>
+                  </div>
+                  {t.complete ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Compleet</span>
+                  ) : (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">Aanvullen</span>
+                  )}
+                </div>
+                <ul className="text-sm text-gray-600 space-y-1 mb-3">
+                  {t.summary.map((line, i) => (
+                    <li key={i}>• {line}</li>
+                  ))}
+                </ul>
+                <button onClick={() => handleCompleteStep(t.step)} className="text-sm text-role font-medium hover:underline">
+                  Bewerken →
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Profile Sections */}
         <div className="grid md:grid-cols-2 gap-6">
