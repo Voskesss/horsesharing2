@@ -4,6 +4,9 @@ import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
 import AddressPicker from '../components/AddressPicker';
 import ImageUploader from '../components/ImageUploader';
+import DatePicker from 'react-datepicker';
+import { format as formatDate } from 'date-fns';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const OwnerOnboarding = () => {
   const navigate = useNavigate();
@@ -269,12 +272,23 @@ const OwnerOnboarding = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Geboortedatum <span className="text-red-600">*</span></label>
-                <input
-                  type="date"
-                  value={basicInfo.date_of_birth}
-                  onChange={(e) => setBasicInfo({...basicInfo, date_of_birth: e.target.value})}
+                <DatePicker
+                  selected={(basicInfo.date_of_birth ? new Date(`${basicInfo.date_of_birth}T00:00:00`) : null)}
+                  onChange={(date) => {
+                    const iso = date ? formatDate(date, 'yyyy-MM-dd') : '';
+                    setBasicInfo({ ...basicInfo, date_of_birth: iso });
+                  }}
+                  dateFormat="dd-MM-yyyy"
+                  placeholderText="dd-mm-jjjj"
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${errors.date_of_birth ? 'border-red-400' : 'border-gray-300'}`}
                   style={{ outlineColor: 'var(--role-primary)' }}
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
+                  minDate={new Date(1930, 0, 1)}
+                  maxDate={new Date()}
+                  openToDate={(!basicInfo.date_of_birth ? new Date(1995, 0, 1) : undefined)}
+                  scrollableYearDropdown
                 />
                 {errors.date_of_birth && <p className="mt-1 text-xs text-red-600">{errors.date_of_birth}</p>}
                 <p className="mt-1 text-xs text-gray-500">Onder 18? Dan vragen we toestemming van een ouder/voogd.</p>
