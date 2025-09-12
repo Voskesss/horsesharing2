@@ -5,6 +5,9 @@ import { createAPI } from '../utils/api';
 import ImageUploader from '../components/ImageUploader';
 import AddressPicker from '../components/AddressPicker';
 import VideosUploader from '../components/VideosUploader';
+import DatePicker from 'react-datepicker';
+import { format as formatDate } from 'date-fns';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const defaultSchedule = () => ({
   maandag: [],
@@ -46,6 +49,10 @@ export default function HorseAdWizard() {
     video_intro_url: '',
     video: '',
     videos: [],
+    ad_reason: '',
+    start_date: '', // ISO yyyy-MM-dd
+    end_date: '',   // ISO yyyy-MM-dd (optioneel)
+    no_end_date: false,
   });
   // Staladres (paardlocatie)
   const [stableAddress, setStableAddress] = useState({
@@ -164,6 +171,15 @@ export default function HorseAdWizard() {
     if (basic.height !== '' && basic.height != null) payload.height = Number(basic.height);
     if (basic.breed) payload.breed = basic.breed;
     if (basic.description) payload.description = basic.description;
+    if (basic.ad_reason) payload.ad_reason = basic.ad_reason;
+    if (basic.start_date) payload.start_date = basic.start_date; // ISO
+    if (basic.no_end_date === true) {
+      payload.no_end_date = true;
+      payload.end_date = null;
+    } else if (basic.end_date) {
+      payload.end_date = basic.end_date; // ISO
+      payload.no_end_date = false;
+    }
     if (Array.isArray(basic.photos) && basic.photos.length) payload.photos = basic.photos;
     if (Array.isArray(basic.videos) && basic.videos.length) payload.videos = basic.videos;
     if (basic.video) payload.video = basic.video; // legacy single
@@ -258,6 +274,10 @@ export default function HorseAdWizard() {
           video: h.video || h.video_intro_url || prev.video,
           video_intro_url: h.video || h.video_intro_url || prev.video_intro_url,
           videos: Array.isArray(h.videos) ? h.videos : (h.video ? [h.video] : (prev.videos||[])),
+          ad_reason: h.ad_reason || prev.ad_reason,
+          start_date: h.start_date || prev.start_date,
+          end_date: (h.no_end_date ? '' : (h.end_date || prev.end_date)),
+          no_end_date: !!h.no_end_date,
         }));
         setAvailability(prev => ({
           ...prev,
@@ -481,6 +501,71 @@ export default function HorseAdWizard() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Advertentietekst</label>
                 <textarea placeholder={"Vertel iets over je paard, wat je zoekt en wanneer. Bijv.: Bella is een rustige merrie van 1.58m. Ik zoek een geduldige bijrijder voor 2 dagen p/w, doordeweeks in de avond. Binnen- en buitenbak aanwezig. Omgeving Velp."} value={basic.description} onChange={(e)=>setBasic({...basic, description: e.target.value})} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }} />
+              </div>
+              {/* Reden van advertentie */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reden van advertentie (optioneel)</label>
+                <textarea
+                  placeholder="Bijv. vakantie, drukte op werk, tijdelijk revalidatieprogramma, etc."
+                  value={basic.ad_reason}
+                  onChange={(e)=>setBasic({...basic, ad_reason: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                  style={{ outlineColor: 'var(--role-primary)' }}
+                />
+              </div>
+              {/* Start- en einddatum */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Startdatum</label>
+                  <DatePicker
+                    selected={(basic.start_date ? new Date(`${basic.start_date}T00:00:00`) : null)}
+                    onChange={(date)=>{
+                      const iso = date ? formatDate(date, 'yyyy-MM-dd') : '';
+                      setBasic(prev => ({ ...prev, start_date: iso, end_date: (prev.end_date && date && new Date(`${prev.end_date}T00:00:00`) < date) ? '' : prev.end_date }));
+                    }}
+                    dateFormat="dd-MM-yyyy"
+                    placeholderText="dd-mm-jjjj"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                    style={{ outlineColor: 'var(--role-primary)' }}
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    minDate={new Date()}
+                    openToDate={new Date()}
+                    scrollableYearDropdown
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Einddatum (optioneel)</label>
+                  <DatePicker
+                    selected={(basic.end_date ? new Date(`${basic.end_date}T00:00:00`) : null)}
+                    onChange={(date)=>{
+                      const iso = date ? formatDate(date, 'yyyy-MM-dd') : '';
+                      setBasic(prev => ({ ...prev, end_date: iso, no_end_date: false }));
+                    }}
+                    dateFormat="dd-MM-yyyy"
+                    placeholderText="dd-mm-jjjj"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${basic.no_end_date ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`}
+                    style={{ outlineColor: 'var(--role-primary)' }}
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    minDate={(basic.start_date ? new Date(`${basic.start_date}T00:00:00`) : new Date())}
+                    disabled={basic.no_end_date}
+                    scrollableYearDropdown
+                  />
+                </div>
+                <div className="flex items-end">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!basic.no_end_date}
+                      onChange={(e)=> setBasic(prev => ({ ...prev, no_end_date: e.target.checked, end_date: e.target.checked ? '' : prev.end_date }))}
+                    />
+                    <span className="text-sm text-gray-700">Geen einddatum bekend</span>
+                  </label>
+                </div>
               </div>
               {/* Basisgegevens */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

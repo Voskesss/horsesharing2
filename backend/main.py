@@ -425,6 +425,11 @@ class HorsePayload(BaseModel):
     rules: Optional[dict] = None
     no_gos: Optional[list] = None
     is_available: Optional[bool] = None
+    # New ad meta
+    ad_reason: Optional[str] = None
+    start_date: Optional[str] = None  # ISO yyyy-MM-dd
+    end_date: Optional[str] = None    # ISO yyyy-MM-dd
+    no_end_date: Optional[bool] = None
     # Stable address (horse location)
     stable_country_code: Optional[str] = None
     stable_postcode: Optional[str] = None
@@ -774,6 +779,11 @@ async def list_owner_horses(
                 "horse_walker": h.horse_walker,
                 "toilet_available": h.toilet_available,
                 "locker_available": h.locker_available,
+                # Ad meta
+                "ad_reason": h.ad_reason,
+                "start_date": (h.start_date.isoformat() if h.start_date else None),
+                "end_date": (h.end_date.isoformat() if h.end_date else None),
+                "no_end_date": bool(h.no_end_date),
             } for h in horses
         ]
     }
@@ -838,6 +848,11 @@ async def get_ad_detail(
         "rules": h.rules or {},
         "no_gos": (json.loads(h.no_gos) if isinstance(h.no_gos, str) and h.no_gos else []),
         "is_available": h.is_available,
+        # Ad meta
+        "ad_reason": h.ad_reason,
+        "start_date": (h.start_date.isoformat() if h.start_date else None),
+        "end_date": (h.end_date.isoformat() if h.end_date else None),
+        "no_end_date": bool(h.no_end_date),
         # Stable address
         "stable_country_code": h.stable_country_code,
         "stable_postcode": h.stable_postcode,
@@ -1100,6 +1115,25 @@ async def create_or_update_horse(
         horse.toilet_available = bool(payload.toilet_available)
     if payload.locker_available is not None:
         horse.locker_available = bool(payload.locker_available)
+    # Ad meta
+    if payload.ad_reason is not None:
+        horse.ad_reason = payload.ad_reason
+    # Dates handling
+    from datetime import datetime
+    if payload.no_end_date is not None:
+        horse.no_end_date = bool(payload.no_end_date)
+        if horse.no_end_date:
+            horse.end_date = None
+    if payload.start_date is not None:
+        try:
+            horse.start_date = datetime.strptime(payload.start_date, "%Y-%m-%d").date()
+        except Exception:
+            horse.start_date = None
+    if payload.end_date is not None and not bool(payload.no_end_date):
+        try:
+            horse.end_date = datetime.strptime(payload.end_date, "%Y-%m-%d").date()
+        except Exception:
+            horse.end_date = None
 
     db.commit()
     db.refresh(horse)

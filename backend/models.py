@@ -210,6 +210,11 @@ class HorseProfile(Base):
     description = Column(Text, nullable=True)
     ad_type = Column(String(20), nullable=True)  # bijrijden/verzorgen/lease
     ad_types = Column(JSON, nullable=True)  # multi-select: ["bijrijden","lease",...]
+    # Ad meta
+    ad_reason = Column(Text, nullable=True)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    no_end_date = Column(Boolean, default=False)
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)  # pony/horse
     height = Column(Integer, nullable=True)  # cm shoulder height
