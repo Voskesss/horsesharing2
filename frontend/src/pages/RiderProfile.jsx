@@ -126,6 +126,29 @@ const RiderProfile = () => {
   };
 
   // Helpers voor tegel-status en samenvatting
+  const humanizeActivityMode = (mode) => {
+    switch (mode) {
+      case 'care_only': return 'Verzorging';
+      case 'ride_only': return 'Rijden';
+      case 'ride_or_care': return 'Rijden of verzorgen';
+      case 'drive_only': return 'Mennen';
+      default: return null;
+    }
+  };
+
+  const availabilitySummaryLines = (() => {
+    const sched = profileData.availability?.available_schedule || {};
+    const days = Object.keys(sched).filter(d => Array.isArray(sched[d]) && sched[d].length>0);
+    if (days.length === 0) {
+      // fallback naar oude velden
+      const daysText = (profileData.availability?.available_days || []).slice(0,3).join(', ') || 'n.v.t.';
+      const blocksText = (profileData.availability?.available_time_blocks || []).slice(0,3).join(', ') || 'n.v.t.';
+      return [`Dagen: ${daysText}`, `Blokken: ${blocksText}`];
+    }
+    // Compact per dag: "Ma: ochtend/middag"
+    return days.slice(0,4).map(d => `${d.slice(0,2)}: ${(sched[d]||[]).join('/')}`);
+  })();
+
   const tiles = [
     {
       step: 1,
@@ -140,11 +163,12 @@ const RiderProfile = () => {
     {
       step: 2,
       title: 'Beschikbaarheid',
-      complete: (profileData.availability.available_days?.length>0),
-      summary: [
-        `Dagen: ${profileData.availability.available_days?.slice(0,3).join(', ') || 'n.v.t.'}`,
-        `Blokken: ${profileData.availability.available_time_blocks?.slice(0,3).join(', ') || 'n.v.t.'}`,
-      ],
+      complete: (() => {
+        const sched = profileData.availability?.available_schedule || {};
+        const hasSched = Object.values(sched).some(arr => Array.isArray(arr) && arr.length>0);
+        return hasSched || (profileData.availability.available_days?.length>0 && profileData.availability.available_time_blocks?.length>0);
+      })(),
+      summary: availabilitySummaryLines,
     },
     {
       step: 3,
@@ -160,7 +184,10 @@ const RiderProfile = () => {
       complete: (typeof profileData.experience.experience_years==='number' && profileData.experience.experience_years>0) || (Array.isArray(profileData.experience.activity_preferences) && profileData.experience.activity_preferences.length>0) || !!profileData.experience.activity_mode,
       summary: [
         `Ervaring: ${profileData.experience.experience_years || 0} jaar`,
-        profileData.experience.activity_mode ? `Modus: ${profileData.experience.activity_mode}` : 'Modus: n.v.t.',
+        (() => {
+          const label = humanizeActivityMode(profileData.experience.activity_mode);
+          return label ? `Modus: ${label}` : 'Modus: n.v.t.';
+        })(),
       ],
     },
     {
@@ -370,172 +397,7 @@ const RiderProfile = () => {
           </div>
         </div>
 
-        {/* Profile Sections */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Basis Informatie */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Basis Informatie</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm text-gray-500">Naam:</span>
-                <p className="font-medium">
-                  {profileData.basicInfo.first_name} {profileData.basicInfo.last_name}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Telefoon:</span>
-                <p className="font-medium">{profileData.basicInfo.phone || 'Niet ingevuld'}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Postcode:</span>
-                <p className="font-medium">{profileData.basicInfo.postcode || 'Niet ingevuld'}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Max reisafstand:</span>
-                <p className="font-medium">{profileData.basicInfo.max_travel_distance_km} km</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Budget */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Budget</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm text-gray-500">Budget range:</span>
-                <p className="font-medium">
-                  €{profileData.budget.budget_min_euro} - €{profileData.budget.budget_max_euro}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Ervaring */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Ervaring</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm text-gray-500">Jaren ervaring:</span>
-                <p className="font-medium">{profileData.experience.experience_years} jaar</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Niveau:</span>
-                <p className="font-medium">
-                  {profileData.experience.certification_level || 'Niet ingevuld'}
-                </p>
-              </div>
-              {Array.isArray(profileData.experience.certifications) && profileData.experience.certifications.length > 0 && (
-                <div>
-                  <span className="text-sm text-gray-500">Certificeringen:</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {profileData.experience.certifications.map(cert => (
-                      <span key={cert} className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">
-                        {cert}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div>
-                <span className="text-sm text-gray-500">Max spronghoogte:</span>
-                <p className="font-medium">{profileData.experience.comfort_levels.jumping_height} cm</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Beschikbaarheid */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Beschikbaarheid</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm text-gray-500">Dagen:</span>
-                <p className="font-medium">
-                  {profileData.availability.available_days.length > 0 
-                    ? profileData.availability.available_days.join(', ')
-                    : 'Niet ingevuld'
-                  }
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Tijdsblokken:</span>
-                <p className="font-medium">
-                  {profileData.availability.available_time_blocks.length > 0 
-                    ? profileData.availability.available_time_blocks.join(', ')
-                    : 'Niet ingevuld'
-                  }
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Sessie duur:</span>
-                <p className="font-medium">
-                  {profileData.availability.session_duration_min} - {profileData.availability.session_duration_max} min
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Doelen */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Doelen & Disciplines</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm text-gray-500">Rijdoelen:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {profileData.goals.riding_goals.length > 0 ? (
-                    profileData.goals.riding_goals.map(goal => (
-                      <span key={goal} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                        {goal.replace('_', ' ')}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-400 text-sm">Niet ingevuld</span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Disciplines:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {profileData.goals.discipline_preferences.length > 0 ? (
-                    profileData.goals.discipline_preferences.map(discipline => (
-                      <span key={discipline} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                        {discipline.replace('_', ' ')}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-400 text-sm">Niet ingevuld</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Taken */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Bereid te Helpen</h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm text-gray-500">Taken:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {profileData.tasks.willing_tasks.length > 0 ? (
-                    profileData.tasks.willing_tasks.map(task => (
-                      <span key={task} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                        {task.replace('_', ' ')}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-400 text-sm">Niet ingevuld</span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Frequentie:</span>
-                <p className="font-medium">
-                  {profileData.tasks.task_frequency || 'Niet ingevuld'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* (Legacy detailblokken verwijderd; tegels zijn nu de waarheid) */}
 
         {/* Action Buttons */}
         <div className="mt-8 flex justify-center space-x-4">
