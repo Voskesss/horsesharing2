@@ -65,11 +65,12 @@ export const publishableReady = (profileData = {}) => {
   const maxB = Number(budget.budget_max_euro);
   const budgetOk = (minB > 0 && maxB > 0 && minB <= maxB);
 
-  // Gewenste paard/pony: type of hoogte-range
+  // Gewenste paard/pony: type én (hoogte-range of maat-categorie)
   const dh = (preferences && preferences.desired_horse) || {};
   const hasType = Array.isArray(dh.type) && dh.type.length > 0;
   const hasHeight = (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) || (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null);
-  const desiredHorseOk = hasType || hasHeight;
+  const hasSizeCats = Array.isArray(dh.size_categories) && dh.size_categories.length > 0;
+  const desiredHorseOk = hasType && (hasHeight || hasSizeCats);
 
   // Ervaring: algemene criteria of specifiek mennen
   const yearsOk = Number(experience.experience_years) > 0;

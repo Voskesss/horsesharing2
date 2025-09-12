@@ -1270,6 +1270,10 @@ async def create_or_update_rider_profile(
             except Exception:
                 new_profile.comfortable_with_trail_rides = False
 
+        # Desired horse JSON (incl. size_categories) direct opslaan indien meegegeven
+        if isinstance(data.get('desired_horse'), dict):
+            new_profile.desired_horse = data.get('desired_horse')
+
         # Certifications mapping
         certifications = data.get('certifications', [])
         new_profile.certifications = certifications

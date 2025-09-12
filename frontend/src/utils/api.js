@@ -282,6 +282,23 @@ export function transformProfileDataForAPI(profileData) {
   add('discipline_preferences', Array.isArray(goals.discipline_preferences) ? goals.discipline_preferences : []);
   add('personality_style', Array.isArray(goals.personality_style) ? goals.personality_style : []);
 
+  // Desired horse (JSON object) – include size_categories for EU size selection
+  if (preferences && preferences.desired_horse && typeof preferences.desired_horse === 'object') {
+    const dh = preferences.desired_horse;
+    const dhOut = {};
+    if (Array.isArray(dh.type) && dh.type.length) dhOut.type = dh.type;
+    if (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) dhOut.schofthoogte_cm_min = dh.schofthoogte_cm_min;
+    if (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null) dhOut.schofthoogte_cm_max = dh.schofthoogte_cm_max;
+    if (Array.isArray(dh.size_categories) && dh.size_categories.length) dhOut.size_categories = dh.size_categories;
+    if (Array.isArray(dh.geslacht) && dh.geslacht.length) dhOut.geslacht = dh.geslacht;
+    if (dh.leeftijd_min !== '' && dh.leeftijd_min != null) dhOut.leeftijd_min = dh.leeftijd_min;
+    if (dh.leeftijd_max !== '' && dh.leeftijd_max != null) dhOut.leeftijd_max = dh.leeftijd_max;
+    if (typeof dh.ras === 'string' && dh.ras.trim() !== '') dhOut.ras = dh.ras;
+    if (typeof dh.stamboek === 'string' && dh.stamboek.trim() !== '') dhOut.stamboek = dh.stamboek;
+    if (Array.isArray(dh.disciplines_paard) && dh.disciplines_paard.length) dhOut.disciplines_paard = dh.disciplines_paard;
+    if (Object.keys(dhOut).length > 0) out['desired_horse'] = dhOut;
+  }
+
   // Vaardigheden
   add('general_skills', Array.isArray(skills.general_skills) ? skills.general_skills : []);
 
@@ -509,38 +526,35 @@ export function transformProfileDataFromAPI(apiData) {
         bitless_ok: !!apiData.material_preferences.bitless_ok,
         spurs: !!apiData.material_preferences.spurs,
         auxiliary_reins: !!apiData.material_preferences.auxiliary_reins,
-        own_helmet: apiData.material_preferences.own_helmet !== undefined ? !!apiData.material_preferences.own_helmet : true,
+        own_helmet: true
       } : {
-        // Fallback op oudere top-level velden
-        bitless_ok: !!apiData.bitless_ok,
-        spurs: !!apiData.spurs_ok,
-        auxiliary_reins: !!apiData.training_aids_ok,
-        own_helmet: true,
+        bitless_ok: false,
+        spurs: false,
+        auxiliary_reins: false,
+        own_helmet: true
       },
-      health_restrictions: parseJSONArray(apiData.health_restrictions) || parseJSONArray(apiData.health_limitations),
+      health_restrictions: parseJSONArray(apiData.health_restrictions),
       insurance_coverage: !!apiData.insurance_coverage,
       no_gos: parseJSONArray(apiData.no_gos),
-      desired_horse: (() => {
-        const dh = apiData.desired_horse || {};
-        return {
-          type: Array.isArray(dh.type) ? dh.type : [],
-          schofthoogte_cm_min: (typeof dh.schofthoogte_cm_min === 'number') ? dh.schofthoogte_cm_min : '',
-          schofthoogte_cm_max: (typeof dh.schofthoogte_cm_max === 'number') ? dh.schofthoogte_cm_max : '',
-          geslacht: Array.isArray(dh.geslacht) ? dh.geslacht : [],
-          leeftijd_min: (typeof dh.leeftijd_min === 'number') ? dh.leeftijd_min : '',
-          leeftijd_max: (typeof dh.leeftijd_max === 'number') ? dh.leeftijd_max : '',
-          ras: dh.ras || '',
-          stamboek: dh.stamboek || '',
-          disciplines_paard: Array.isArray(dh.disciplines_paard) ? dh.disciplines_paard : [],
-          handgevoeligheid: dh.handgevoeligheid || '',
-          temperament: Array.isArray(dh.temperament) ? dh.temperament : [],
-          vergevingsgezindheid: dh.vergevingsgezindheid || '',
-          ervaring_rijder_nodig: dh.ervaring_rijder_nodig || '',
-          vachtkleuren: Array.isArray(dh.vachtkleuren) ? dh.vachtkleuren : [],
-          niet_belangrijk_vachtkleur: !!dh.niet_belangrijk_vachtkleur,
-        };
-      })(),
-      riding_styles: parseJSONArray(apiData.riding_styles)
+      riding_styles: parseJSONArray(apiData.riding_styles),
+      desired_horse: {
+        type: parseJSONArray(apiData.desired_horse?.type),
+        schofthoogte_cm_min: apiData.desired_horse?.schofthoogte_cm_min ?? '',
+        schofthoogte_cm_max: apiData.desired_horse?.schofthoogte_cm_max ?? '',
+        size_categories: parseJSONArray(apiData.desired_horse?.size_categories),
+        geslacht: parseJSONArray(apiData.desired_horse?.geslacht),
+        leeftijd_min: apiData.desired_horse?.leeftijd_min ?? '',
+        leeftijd_max: apiData.desired_horse?.leeftijd_max ?? '',
+        ras: apiData.desired_horse?.ras || '',
+        stamboek: apiData.desired_horse?.stamboek || '',
+        disciplines_paard: parseJSONArray(apiData.desired_horse?.disciplines_paard),
+        handgevoeligheid: apiData.desired_horse?.handgevoeligheid || '',
+        temperament: parseJSONArray(apiData.desired_horse?.temperament),
+        vergevingsgezindheid: apiData.desired_horse?.vergevingsgezindheid || '',
+        ervaring_rijder_nodig: apiData.desired_horse?.ervaring_rijder_nodig || '',
+        vachtkleuren: parseJSONArray(apiData.desired_horse?.vachtkleuren),
+        niet_belangrijk_vachtkleur: !!apiData.desired_horse?.niet_belangrijk_vachtkleur,
+      }
     },
     media: {
       photos: parseJSONArray(apiData.photos),

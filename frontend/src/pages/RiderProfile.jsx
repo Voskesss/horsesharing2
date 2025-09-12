@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataFromAPI } from '../utils/api';
-import { calculateRiderProfileProgress, getIncompleteSteps } from '../utils/riderProfileProgress';
+import { calculateRiderProfileProgress, getIncompleteSteps, publishableReady } from '../utils/riderProfileProgress';
 
 const RiderProfile = () => {
   const navigate = useNavigate();
@@ -10,6 +10,8 @@ const RiderProfile = () => {
   const [profileData, setProfileData] = useState(null);
   const api = createAPI(getToken);
   const [loading, setLoading] = useState(true);
+  const [me, setMe] = useState(null);
+  const [publishing, setPublishing] = useState(false);
 
   if (!isAuthenticated) {
     navigate('/');
@@ -22,6 +24,10 @@ const RiderProfile = () => {
         const apiData = await api.riderProfile.get();
         const transformedData = transformProfileDataFromAPI(apiData);
         setProfileData(transformedData);
+        try {
+          const meData = await api.user.getMe();
+          setMe(meData);
+        } catch {}
       } catch (error) {
         console.error('Error fetching rider profile:', error);
         // Als er geen profiel is, gebruik default data
@@ -106,6 +112,22 @@ const RiderProfile = () => {
 
   const progressPercentage = calculateRiderProfileProgress(profileData);
   const incompleteSteps = getIncompleteSteps(profileData);
+  const isPublishable = publishableReady(profileData || {});
+  const isPublished = !!(me?.has_rider_profile && me?.onboarding_completed);
+
+  const handlePublish = async () => {
+    try {
+      if (!isPublishable) return;
+      setPublishing(true);
+      await api.user.completeOnboarding('rider');
+      const meData = await api.user.getMe();
+      setMe(meData);
+    } catch (e) {
+      // noop; kan mislukken
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   const handleEditProfile = () => {
     navigate('/rider-onboarding');
@@ -137,8 +159,8 @@ const RiderProfile = () => {
       const blocksText = (profileData.availability?.available_time_blocks || []).slice(0,3).join(', ') || 'n.v.t.';
       return [`Dagen: ${daysText}`, `Blokken: ${blocksText}`];
     }
-    // Compact per dag: "Ma: ochtend/middag"
-    return days.slice(0,4).map(d => `${d.slice(0,2)}: ${(sched[d]||[]).join('/')}`);
+    // Compact per dag: "Ma: ochtend/middag" (toon alle gekozen dagen)
+    return days.map(d => `${d.slice(0,2)}: ${(sched[d]||[]).join('/')}`);
   })();
 
   const tiles = [
@@ -173,6 +195,31 @@ const RiderProfile = () => {
     },
     {
       step: 4,
+      title: 'Gewenste paard/pony',
+      complete: (() => {
+        const dh = profileData.preferences?.desired_horse || {};
+        const hasType = Array.isArray(dh.type) && dh.type.length > 0;
+        const hasHeight = (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) || (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null);
+        const hasSizeCats = Array.isArray(dh.size_categories) && dh.size_categories.length > 0;
+        return hasType && (hasHeight || hasSizeCats);
+      })(),
+      summary: [
+        (() => {
+          const dh = profileData.preferences?.desired_horse || {};
+          const type = (Array.isArray(dh.type) ? dh.type.join('/') : '') || 'n.v.t.';
+          return `Type: ${type}`;
+        })(),
+        (() => {
+          const dh = profileData.preferences?.desired_horse || {};
+          const min = dh.schofthoogte_cm_min; const max = dh.schofthoogte_cm_max;
+          const range = (min || max) ? `${min || '?'}–${max || '?' } cm` : null;
+          const cats = Array.isArray(dh.size_categories) && dh.size_categories.length ? dh.size_categories.join(', ') : null;
+          return range ? `Hoogte: ${range}` : (`Maten: ${cats || 'n.v.t.'}`);
+        })(),
+      ],
+    },
+    {
+      step: 7,
       title: 'Ervaring & Activiteiten',
       complete: (typeof profileData.experience.experience_years==='number' && profileData.experience.experience_years>0) || (Array.isArray(profileData.experience.activity_preferences) && profileData.experience.activity_preferences.length>0) || !!profileData.experience.activity_mode,
       summary: [
@@ -193,7 +240,7 @@ const RiderProfile = () => {
       ],
     },
     {
-      step: 6,
+      step: 8,
       title: 'Vaardigheden',
       complete: (profileData.skills?.general_skills?.length>0),
       summary: [
@@ -201,16 +248,7 @@ const RiderProfile = () => {
       ],
     },
     {
-      step: 7,
-      title: 'Lease-voorkeuren',
-      complete: !!profileData.lease?.wants_lease || (profileData.lease && Object.keys(profileData.lease).length>0),
-      summary: [
-        profileData.lease?.wants_lease ? 'Lease: ja' : 'Lease: n.v.t.',
-        (profileData.lease?.budget_max_pm_lease!=null) ? `Max: €${profileData.lease.budget_max_pm_lease}/mnd` : 'Budget: n.v.t.',
-      ],
-    },
-    {
-      step: 8,
+      step: 6,
       title: 'Taken',
       complete: (profileData.tasks.willing_tasks?.length>0 || !!profileData.tasks.task_frequency),
       summary: [
@@ -254,12 +292,27 @@ const RiderProfile = () => {
                 <p className="text-gray-600">Ruiter Profiel</p>
               </div>
             </div>
-            <button
-              onClick={handleEditProfile}
-              className="btn-role"
-            >
-              Profiel Bewerken
-            </button>
+            <div className="flex items-center gap-3">
+              <span className={`text-xs px-2 py-1 rounded-full border ${isPublished ? 'bg-green-50 border-green-300 text-green-700' : 'bg-yellow-50 border-yellow-300 text-yellow-700'}`}>
+                {isPublished ? 'Gepubliceerd' : 'Concept'}
+              </span>
+              {!isPublished && (
+                <button
+                  onClick={handlePublish}
+                  disabled={!isPublishable || publishing}
+                  title={!isPublishable ? 'Vul eerst de vereiste velden aan' : 'Publiceer je profiel'}
+                  className={`px-4 py-2 rounded-lg text-white ${(!isPublishable || publishing) ? 'bg-gray-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'} transition-colors`}
+                >
+                  {publishing ? 'Publiceren…' : 'Publiceren'}
+                </button>
+              )}
+              <button
+                onClick={handleEditProfile}
+                className="btn-role"
+              >
+                Profiel Bewerken
+              </button>
+            </div>
           </div>
         </div>
 

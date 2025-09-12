@@ -138,6 +138,7 @@ const RiderOnboarding = () => {
       ervaring_rijder_nodig: '', // 'beginner_ok'|'licht_gevorderd'|'gevorderd'|'zeer_ervaren'
       vachtkleuren: [],
       niet_belangrijk_vachtkleur: false,
+      size_categories: [], // ['shetlander','pony_a','pony_b','pony_c','pony_d','pony_e','paard']
     }
   });
 
@@ -214,7 +215,8 @@ const RiderOnboarding = () => {
     const dh = preferences.desired_horse || {};
     const hasType = Array.isArray(dh.type) && dh.type.length > 0;
     const hasHeight = (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) || (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null);
-    return hasType || hasHeight;
+    const hasSizeCats = Array.isArray(dh.size_categories) && dh.size_categories.length > 0;
+    return hasType && (hasHeight || hasSizeCats);
   })();
 
   const step5MinOk = (() => {
@@ -612,6 +614,30 @@ const RiderOnboarding = () => {
                 style={{ width: `${matchingScore}%`, backgroundColor: 'var(--role-primary)' }}
               ></div>
             </div>
+          </div>
+
+          {/* Jump menu: snel naar stap */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Snel naar stap</label>
+            <select
+              className="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={currentStep}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                if (!Number.isNaN(n)) setCurrentStep(n);
+              }}
+            >
+              <option value={1}>1 — Basis Informatie</option>
+              <option value={2}>2 — Beschikbaarheid</option>
+              <option value={3}>3 — Budget</option>
+              <option value={4}>4 — Gewenste paard/pony</option>
+              <option value={5}>5 — Doelen & Disciplines</option>
+              <option value={6}>6 — Taken</option>
+              <option value={7}>7 — Ervaring & Activiteiten</option>
+              <option value={8}>8 — Vaardigheden</option>
+              <option value={9}>9 — Voorkeuren</option>
+              <option value={10}>10 — Media & Voltooien</option>
+            </select>
           </div>
 
           {/* Step 1: Basis Informatie */}
@@ -1149,6 +1175,41 @@ const RiderOnboarding = () => {
                 </div>
               </div>
 
+              {/* Maat-categorieën (alternatief) */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Maat‑categorieën (alternatief voor schofthoogte)</label>
+                  <span className="text-[11px] text-gray-500">Je kunt meerdere kiezen</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key:'shetlander', label:'Shetlander', hint:'~<107 cm' },
+                    { key:'pony_a', label:'Pony A', hint:'~≤117 cm' },
+                    { key:'pony_b', label:'Pony B', hint:'~117–127 cm' },
+                    { key:'pony_c', label:'Pony C', hint:'~127–137 cm' },
+                    { key:'pony_d', label:'Pony D', hint:'~137–148 cm' },
+                    { key:'pony_e', label:'Pony E', hint:'~148–157 cm (niet overal gebruikt)' },
+                    { key:'paard', label:'Paard', hint:'~≥148 cm' },
+                  ].map(opt => {
+                    const active = preferences.desired_horse.size_categories.includes(opt.key);
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => {
+                          const has = active;
+                          const next = has ? preferences.desired_horse.size_categories.filter(x => x !== opt.key) : [...preferences.desired_horse.size_categories, opt.key];
+                          setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, size_categories: next }});
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                        title={opt.hint}
+                      >{opt.label}</button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">Hints zijn indicatief; categorie‑indeling is in de EU grotendeels gelijk (A‑D). “E‑pony” wordt niet overal gebruikt.</p>
+              </div>
+
               {/* Rijstijl & uitrusting */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Rijstijl & uitrusting</label>
@@ -1244,7 +1305,7 @@ const RiderOnboarding = () => {
                 Gewenste paard/pony
                 <span className={`text-xs px-2 py-0.5 rounded-full border ${step4MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step4MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
-              <p className="text-xs text-gray-600 -mt-2">Minimaal: kies <strong>Type</strong> of vul een <strong>Schofthoogte</strong> (min/max) in.</p>
+              <p className="text-xs text-gray-600 -mt-2">Minimaal: kies <strong>Type</strong> én vul óf <strong>Schofthoogte</strong> (min/max) in óf selecteer één of meer <strong>Maat‑categorieën</strong>.</p>
 
               {/* Type en Schofthoogte */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1287,6 +1348,38 @@ const RiderOnboarding = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+              </div>
+
+              {/* Maat-categorieën */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Maat‑categorieën</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key:'shetlander', label:'Shetlander', hint:'~<107 cm' },
+                    { key:'pony_a', label:'Pony A', hint:'~≤117 cm' },
+                    { key:'pony_b', label:'Pony B', hint:'~117–127 cm' },
+                    { key:'pony_c', label:'Pony C', hint:'~127–137 cm' },
+                    { key:'pony_d', label:'Pony D', hint:'~137–148 cm' },
+                    { key:'pony_e', label:'Pony E', hint:'~148–157 cm (niet overal gebruikt)' },
+                    { key:'paard', label:'Paard', hint:'~≥148 cm' },
+                  ].map(opt => {
+                    const active = preferences.desired_horse.size_categories.includes(opt.key);
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => {
+                          const has = active;
+                          const next = has ? preferences.desired_horse.size_categories.filter(x => x !== opt.key) : [...preferences.desired_horse.size_categories, opt.key];
+                          setPreferences({ ...preferences, desired_horse: { ...preferences.desired_horse, size_categories: next }});
+                        }}
+                        className={`px-3 py-2 rounded-full border text-sm ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700'}`}
+                        title={opt.hint}
+                      >{opt.label}</button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">Hints zijn indicatief; categorie‑indeling is in de EU grotendeels gelijk (A‑D). “E‑pony” wordt niet overal gebruikt.</p>
               </div>
 
               {/* Geslacht en Leeftijd */}
