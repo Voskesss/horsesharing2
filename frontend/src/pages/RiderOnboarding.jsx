@@ -58,8 +58,8 @@ const RiderOnboarding = () => {
 
   // Budget
   const [budget, setBudget] = useState({
-    budget_min_euro: 150,
-    budget_max_euro: 250
+    budget_min_euro: '',
+    budget_max_euro: ''
   });
 
   // Ervaring
