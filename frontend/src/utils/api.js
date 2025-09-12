@@ -261,8 +261,11 @@ export function transformProfileDataForAPI(profileData) {
   add('min_days_per_week', availability.min_days_per_week);
 
   // Budget (per maand)
-  add('budget_min_euro', budget.budget_min_euro);
-  add('budget_max_euro', budget.budget_max_euro);
+  // Always include budget keys so that clearing fields (empty string) resets them to null in backend
+  const _bmin = (budget.budget_min_euro === '' || budget.budget_min_euro === undefined) ? null : budget.budget_min_euro;
+  const _bmax = (budget.budget_max_euro === '' || budget.budget_max_euro === undefined) ? null : budget.budget_max_euro;
+  out['budget_min_euro'] = _bmin;
+  out['budget_max_euro'] = _bmax;
 
   // Ervaring
   add('experience_years', experience.experience_years);
@@ -437,8 +440,13 @@ export function transformProfileDataFromAPI(apiData) {
         : 1
     },
     budget: {
-      budget_min_euro: apiData.budget_min || apiData.budget_min_euro || 150,
-      budget_max_euro: apiData.budget_max || apiData.budget_max_euro || 250
+      // Geen defaults meer; laat leeg als backend geen waarden heeft
+      budget_min_euro: (apiData.budget_min !== undefined && apiData.budget_min !== null)
+        ? apiData.budget_min
+        : (apiData.budget_min_euro !== undefined && apiData.budget_min_euro !== null ? apiData.budget_min_euro : ''),
+      budget_max_euro: (apiData.budget_max !== undefined && apiData.budget_max !== null)
+        ? apiData.budget_max
+        : (apiData.budget_max_euro !== undefined && apiData.budget_max_euro !== null ? apiData.budget_max_euro : '')
     },
     experience: {
       experience_years: apiData.years_experience || apiData.experience_years || 0,

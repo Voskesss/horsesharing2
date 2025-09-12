@@ -21,14 +21,6 @@ const RiderProfile = () => {
       try {
         const apiData = await api.riderProfile.get();
         const transformedData = transformProfileDataFromAPI(apiData);
-        // Prefill foto vanuit owner indien rider nog leeg heeft
-        try {
-          const me = await api.user.getMe();
-          const ownerUrl = me?.owner_photo_url || '';
-          if ((!Array.isArray(transformedData.media.photos) || transformedData.media.photos.length === 0) && ownerUrl) {
-            transformedData.media.photos = [ownerUrl];
-          }
-        } catch {}
         setProfileData(transformedData);
       } catch (error) {
         console.error('Error fetching rider profile:', error);

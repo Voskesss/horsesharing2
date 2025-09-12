@@ -482,6 +482,11 @@ const RiderOnboarding = () => {
 
   const handleSubmit = async () => {
     try {
+      // Publiceerbaar check
+      if (!isPublishable) {
+        alert('Je profiel is nog niet publiceerbaar. Vul a.u.b. de gemarkeerde verplichte velden aan.');
+        return;
+      }
       // Validatie: minderjarig (<=16) begeleiding verplicht
       const age = calculateAge(basicInfo.date_of_birth);
       if (age !== null && age <= 16) {
@@ -505,6 +510,12 @@ const RiderOnboarding = () => {
       const apiData = transformProfileDataForAPI(profileData);
       await api.riderProfile.createOrUpdate(apiData);
       console.log('Rider profile saved successfully!');
+      // Markeer onboarding als voltooid voor ruiter
+      try {
+        await api.user.completeOnboarding('rider');
+      } catch (e) {
+        console.warn('completeOnboarding faalde (non-blocking):', e?.message || e);
+      }
       navigate('/rider-profile');
     } catch (error) {
       console.error('Error saving rider profile:', error);
