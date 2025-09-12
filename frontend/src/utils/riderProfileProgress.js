@@ -1,89 +1,167 @@
 // Utility functies voor rider profile progress berekening
-// Kan gebruikt worden in onboarding en dashboard
+// Doel: twee aparte metrics bieden
+// 1) publishableReady(profileData): boolean – minimale set ingevuld om te publiceren
+// 2) calculateMatchingScore(profileData): number (0-100) – bijdrage aan betere matching
 
-// Nieuwe 10-staps indeling en weging (telt op tot 10 voor eenvoud)
-export const REQUIRED_FIELDS = {
-  1: { weight: 1 }, // Basisinformatie
-  2: { weight: 1 }, // Beschikbaarheid
-  3: { weight: 1 }, // Budget
-  4: { weight: 1 }, // Ervaring & Activiteiten
-  5: { weight: 1 }, // Doelen & Disciplines
-  6: { weight: 1 }, // Vaardigheden
-  7: { weight: 1 }, // Lease-voorkeuren
-  8: { weight: 1 }, // Taken
-  9: { weight: 1 }, // Voorkeuren
- 10: { weight: 1 }, // Media
+// Helper: veilige getters
+const safeArrLen = (x) => Array.isArray(x) ? x.length : 0;
+const calcAge = (dobStr) => {
+  if (!dobStr) return null;
+  try {
+    const dob = new Date(dobStr);
+    if (isNaN(dob.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age;
+  } catch {
+    return null;
+  }
 };
 
-// Bereken progress percentage gebaseerd op ingevulde verplichte velden
-export const calculateRiderProfileProgress = (profileData) => {
+// 1) Minimaal publiceerbaar (sectie-criteria)
+export const publishableReady = (profileData = {}) => {
   const {
     basicInfo = {},
+    address = {},
+    availability = {},
+    budget = {},
+    experience = {},
+    goals = {},
+    tasks = {},
+    preferences = {},
+    media = {},
+  } = profileData;
+
+  // Basis: voornaam + achternaam + adres + 1 profielfoto + lengte/gewicht + geboortedatum (+ minderjarigenlogica)
+  const hasName = !!(basicInfo.first_name && String(basicInfo.first_name).trim());
+  const hasLastName = !!(basicInfo.last_name && String(basicInfo.last_name).trim());
+  const hasAddress = !!(address && address.postcode && address.house_number);
+  const hasAvatar = Array.isArray(media.photos) && media.photos.length >= 1;
+  const heightOk = Number(basicInfo.rider_height_cm) > 0;
+  const weightOk = Number(basicInfo.rider_weight_kg) > 0;
+  const age = calcAge(basicInfo.date_of_birth);
+  const hasDob = age !== null; // geldig datumformaat vereist
+  // Minderjarig (<=16): consent vereist; bij consent true ook naam+email begeleider
+  let minorOk = true;
+  if (hasDob && age <= 16) {
+    const consent = basicInfo.parent_consent;
+    const ifConsentThenContacts = consent === true ? (
+      !!(basicInfo.parent_contact_name && String(basicInfo.parent_contact_name).trim()) &&
+      !!(basicInfo.parent_contact_email && String(basicInfo.parent_contact_email).trim())
+    ) : true;
+    minorOk = (consent === true || consent === false) && ifConsentThenContacts;
+  }
+  const basisOk = hasName && hasLastName && hasAddress && hasAvatar && heightOk && weightOk && hasDob && minorOk;
+
+  // Beschikbaarheid: min. 1 dag met 1 blok via schedule of fallback
+  const schedule = availability.available_schedule || {};
+  const hasSchedule = !!schedule && Object.values(schedule).some(arr => Array.isArray(arr) && arr.length > 0);
+  const availOk = hasSchedule || (safeArrLen(availability.available_days) > 0 && safeArrLen(availability.available_time_blocks) > 0);
+
+  // Budget: >0 en min <= max
+  const minB = Number(budget.budget_min_euro);
+  const maxB = Number(budget.budget_max_euro);
+  const budgetOk = (minB > 0 && maxB > 0 && minB <= maxB);
+
+  // Gewenste paard/pony: type of hoogte-range
+  const dh = (preferences && preferences.desired_horse) || {};
+  const hasType = Array.isArray(dh.type) && dh.type.length > 0;
+  const hasHeight = (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) || (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null);
+  const desiredHorseOk = hasType || hasHeight;
+
+  // Ervaring: algemene criteria of specifiek mennen
+  const yearsOk = Number(experience.experience_years) > 0;
+  const modeOk = !!experience.activity_mode;
+  const prefsOk = Array.isArray(experience.activity_preferences) && experience.activity_preferences.length > 0;
+  const isDriveOnly = experience.activity_mode === 'drive_only';
+  const mennenOk = isDriveOnly ? !!experience.mennen_experience : true;
+  const experienceOk = mennenOk && (yearsOk || modeOk || prefsOk);
+
+  // Doelen: alleen verplicht als rijden in scope
+  const rideInScope = experience.activity_mode === 'ride_only' || experience.activity_mode === 'ride_or_care';
+  const goalsOk = !rideInScope || (safeArrLen(goals.riding_goals) > 0 || safeArrLen(goals.discipline_preferences) > 0);
+
+  // Taken: minstens 1 taak of frequentie
+  const tasksOk = (safeArrLen(tasks.willing_tasks) > 0) || !!tasks.task_frequency;
+
+  return !!(basisOk && availOk && budgetOk && desiredHorseOk && experienceOk && goalsOk && tasksOk);
+};
+
+// 2) Matching score (sectie-gewogen)
+// Voorstel weging (totaal 100):
+// Basis 18, Beschikbaarheid 15, Budget 12, Ervaring 15, Gewenste paard 12,
+// Doelen 10 (alleen als rijden in scope), Taken 6, Vaardigheden 6, Voorkeuren 3, Extra media 3
+export const calculateMatchingScore = (profileData = {}) => {
+  const {
+    basicInfo = {},
+    address = {},
     availability = {},
     budget = {},
     experience = {},
     goals = {},
     tasks = {},
     skills = {},
-    lease = {},
     preferences = {},
-    media = {}
+    media = {},
   } = profileData;
 
-  const w = (n) => REQUIRED_FIELDS[n].weight;
-  const sumWeights = Object.values(REQUIRED_FIELDS).reduce((a,b)=>a+b.weight,0);
   let score = 0;
 
-  // 1: Basisinformatie (relaxed)
-  const step1Completed = !!(basicInfo.first_name && basicInfo.postcode);
-  if (step1Completed) score += w(1);
+  // Basis (18): naam + adres + avatar (zoals publiceerbaar)
+  const hasName = !!(basicInfo.first_name && String(basicInfo.first_name).trim());
+  const hasAddress = !!(address && address.postcode && address.house_number);
+  const hasAvatar = Array.isArray(media.photos) && media.photos.length >= 1;
+  if (hasName && hasAddress && hasAvatar) score += 18;
 
-  // 2: Beschikbaarheid: min. 1 dag met 1 blok (liefst via available_schedule)
+  // Beschikbaarheid (15)
   const schedule = availability.available_schedule || {};
-  const hasSchedule = !!schedule && Object.values(schedule).some(arr => Array.isArray(arr) && arr.length>0);
-  const step2Completed = hasSchedule || (availability.available_days?.length>0 && availability.available_time_blocks?.length>0);
-  if (step2Completed) score += w(2);
+  const hasSchedule = !!schedule && Object.values(schedule).some(arr => Array.isArray(arr) && arr.length > 0);
+  if (hasSchedule || (safeArrLen(availability.available_days) > 0 && safeArrLen(availability.available_time_blocks) > 0)) score += 15;
 
-  // 3: Budget: beide > 0
-  const step3Completed = (Number(budget.budget_min_euro)>0 && Number(budget.budget_max_euro)>0);
-  if (step3Completed) score += w(3);
+  // Budget (12)
+  const minB = Number(budget.budget_min_euro);
+  const maxB = Number(budget.budget_max_euro);
+  if (minB > 0 && maxB > 0 && minB <= maxB) score += 12;
 
-  // 4: Ervaring & Activiteiten: enige van (years>0 | activity_mode | activity_preferences>0)
-  const step4Completed = (Number(experience.experience_years)>0) || !!experience.activity_mode || (Array.isArray(experience.activity_preferences) && experience.activity_preferences.length>0);
-  if (step4Completed) score += w(4);
+  // Ervaring (15)
+  const yearsOk = Number(experience.experience_years) > 0;
+  const modeOk = !!experience.activity_mode;
+  const prefsOk = Array.isArray(experience.activity_preferences) && experience.activity_preferences.length > 0;
+  const isDriveOnly = experience.activity_mode === 'drive_only';
+  const mennenOk = isDriveOnly ? !!experience.mennen_experience : true;
+  if (mennenOk && (yearsOk || modeOk || prefsOk)) score += 15;
 
-  // 5: Doelen & Disciplines: minstens 1 ingevuld
-  const step5Completed = (Array.isArray(goals.riding_goals) && goals.riding_goals.length>0) || (Array.isArray(goals.discipline_preferences) && goals.discipline_preferences.length>0);
-  if (step5Completed) score += w(5);
+  // Gewenste paard (12)
+  const dh = (preferences && preferences.desired_horse) || {};
+  const hasType = Array.isArray(dh.type) && dh.type.length > 0;
+  const hasHeight = (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) || (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null);
+  if (hasType || hasHeight) score += 12;
 
-  // 6: Vaardigheden
-  const step6Completed = Array.isArray(skills.general_skills) && skills.general_skills.length>0;
-  if (step6Completed) score += w(6);
+  // Doelen (10) – alleen als rijden in scope
+  const rideInScope = experience.activity_mode === 'ride_only' || experience.activity_mode === 'ride_or_care';
+  if (rideInScope && (safeArrLen(goals.riding_goals) > 0 || safeArrLen(goals.discipline_preferences) > 0)) score += 10;
 
-  // 7: Lease-voorkeuren (iets ingevuld)
-  const leaseKeys = lease && typeof lease==='object' ? Object.keys(lease).filter(k=> lease[k]!==null && lease[k]!==undefined && lease[k]!=='' ) : [];
-  const step7Completed = leaseKeys.length>0;
-  if (step7Completed) score += w(7);
+  // Taken (6)
+  if (safeArrLen(tasks.willing_tasks) > 0 || !!tasks.task_frequency) score += 6;
 
-  // 8: Taken
-  const step8Completed = (Array.isArray(tasks.willing_tasks) && tasks.willing_tasks.length>0) || !!tasks.task_frequency;
-  if (step8Completed) score += w(8);
+  // Vaardigheden (6)
+  if (safeArrLen(skills.general_skills) > 0) score += 6;
 
-  // 9: Voorkeuren (iets ingevuld)
-  const hasHealth = Array.isArray(preferences.health_restrictions) && preferences.health_restrictions.length>0;
-  const hasNoGos = Array.isArray(preferences.no_gos) && preferences.no_gos.length>0;
-  const hasMat = preferences.material_preferences && Object.keys(preferences.material_preferences).some(k=> preferences.material_preferences[k]===true);
-  const step9Completed = hasHealth || hasNoGos || hasMat;
-  if (step9Completed) score += w(9);
+  // Voorkeuren (3) – iets ingevuld
+  const hasHealth = safeArrLen(preferences.health_restrictions) > 0;
+  const hasNoGos = safeArrLen(preferences.no_gos) > 0;
+  const hasMat = preferences.material_preferences && Object.keys(preferences.material_preferences).some(k => preferences.material_preferences[k] === true);
+  if (hasHealth || hasNoGos || hasMat) score += 3;
 
-  // 10: Media
-  const hasVideos = Array.isArray(media.videos) && media.videos.length>0;
-  const hasPhotos = Array.isArray(media.photos) && media.photos.length>0;
+  // Extra media (3) – bovenop avatar (meer foto’s of video)
+  const extraPhotos = Array.isArray(media.photos) && media.photos.length > 1;
+  const hasVideos = Array.isArray(media.videos) && media.videos.length > 0;
   const hasIntro = !!media.video_intro_url;
-  const step10Completed = hasPhotos || hasVideos || hasIntro;
-  if (step10Completed) score += w(10);
+  if (extraPhotos || hasVideos || hasIntro) score += 3;
 
-  return Math.round((score / sumWeights) * 100);
+  return Math.max(0, Math.min(100, Math.round(score)));
 };
 
 // Geef terug welke stappen nog niet compleet zijn
@@ -146,13 +224,13 @@ export const getIncompleteSteps = (profileData) => {
 };
 
 // Check of profiel minimaal compleet is (verplichte stappen)
-export const isProfileMinimallyComplete = (profileData) => {
-  const progress = calculateRiderProfileProgress(profileData);
-  return progress >= 70; // iets relaxter drempel
-};
+export const isProfileMinimallyComplete = (profileData) => publishableReady(profileData);
 
 // Geef volgende stap die ingevuld moet worden
 export const getNextIncompleteStep = (profileData) => {
   const incompleteSteps = getIncompleteSteps(profileData);
   return incompleteSteps.length > 0 ? incompleteSteps[0].step : null;
 };
+
+// Backward compatibility: oude naam blijft werken, verwijst naar matching score
+export const calculateRiderProfileProgress = (profileData) => calculateMatchingScore(profileData);

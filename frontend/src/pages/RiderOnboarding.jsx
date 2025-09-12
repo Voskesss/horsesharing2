@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
-import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
+import { calculateMatchingScore, publishableReady } from '../utils/riderProfileProgress';
 import ImageUploader from '../components/ImageUploader';
 import AddressPicker from '../components/AddressPicker';
 import VideosUploader from '../components/VideosUploader';
+import DatePicker from 'react-datepicker';
+import { format as formatDate } from 'date-fns';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const RiderOnboarding = () => {
   const navigate = useNavigate();
@@ -173,6 +176,67 @@ const RiderOnboarding = () => {
     }
   };
 
+  // Minimale publiceerbaar-criteria per tab (voor badges)
+  const age = calculateAge(basicInfo.date_of_birth);
+  const step1MinOk = (() => {
+    const hasFirst = !!(basicInfo.first_name && basicInfo.first_name.trim());
+    const hasLast = !!(basicInfo.last_name && basicInfo.last_name.trim());
+    const hasAddress = !!(address && address.postcode && address.house_number);
+    const hasAvatar = Array.isArray(media.photos) && media.photos.length >= 1;
+    const heightOk = Number(basicInfo.rider_height_cm) > 0;
+    const weightOk = Number(basicInfo.rider_weight_kg) > 0;
+    const hasDob = age !== null;
+    let minorOk = true;
+    if (hasDob && age <= 16) {
+      const consent = basicInfo.parent_consent;
+      const contactsOk = consent === true ? (
+        !!(basicInfo.parent_contact_name && basicInfo.parent_contact_name.trim()) &&
+        !!(basicInfo.parent_contact_email && basicInfo.parent_contact_email.trim())
+      ) : true;
+      minorOk = (consent === true || consent === false) && contactsOk;
+    }
+    return hasFirst && hasLast && hasAddress && hasAvatar && heightOk && weightOk && hasDob && minorOk;
+  })();
+
+  const step2MinOk = (() => {
+    const schedule = availability.available_schedule || {};
+    const hasSchedule = !!schedule && Object.values(schedule).some(arr => Array.isArray(arr) && arr.length > 0);
+    return hasSchedule || (Array.isArray(availability.available_days) && availability.available_days.length>0 && Array.isArray(availability.available_time_blocks) && availability.available_time_blocks.length>0);
+  })();
+
+  const step3MinOk = (() => {
+    const minB = Number(budget.budget_min_euro);
+    const maxB = Number(budget.budget_max_euro);
+    return (minB > 0 && maxB > 0 && minB <= maxB);
+  })();
+
+  const step4MinOk = (() => {
+    const dh = preferences.desired_horse || {};
+    const hasType = Array.isArray(dh.type) && dh.type.length > 0;
+    const hasHeight = (dh.schofthoogte_cm_min !== '' && dh.schofthoogte_cm_min != null) || (dh.schofthoogte_cm_max !== '' && dh.schofthoogte_cm_max != null);
+    return hasType || hasHeight;
+  })();
+
+  const step5MinOk = (() => {
+    const mode = experience.activity_mode || '';
+    const rideInScope = mode === 'ride_only' || mode === 'ride_or_care';
+    if (!rideInScope) return true;
+    return (Array.isArray(goals.riding_goals) && goals.riding_goals.length>0) || (Array.isArray(goals.discipline_preferences) && goals.discipline_preferences.length>0);
+  })();
+
+  const step6MinOk = (() => {
+    return (Array.isArray(tasks.willing_tasks) && tasks.willing_tasks.length>0) || !!tasks.task_frequency;
+  })();
+
+  const step7MinOk = (() => {
+    const yearsOk = Number(experience.experience_years) > 0;
+    const modeOk = !!experience.activity_mode;
+    const prefsOk = Array.isArray(experience.activity_preferences) && experience.activity_preferences.length > 0;
+    const isDriveOnly = experience.activity_mode === 'drive_only';
+    const mennenOk = isDriveOnly ? !!experience.mennen_experience : true;
+    return mennenOk && (yearsOk || modeOk || prefsOk);
+  })();
+
   // Bereken progress percentage
   const profileData = {
     basicInfo,
@@ -187,7 +251,8 @@ const RiderOnboarding = () => {
     preferences,
     media
   };
-  const progressPercentage = calculateRiderProfileProgress(profileData);
+  const matchingScore = calculateMatchingScore(profileData);
+  const isPublishable = publishableReady(profileData);
 
   // Houd basicInfo.* in sync met address.* voor compat en payload-fallbacks
   useEffect(() => {
@@ -200,8 +265,8 @@ const RiderOnboarding = () => {
     }));
   }, [address.postcode, address.house_number, address.street, address.city]);
 
-  // Helper: bereken leeftijd op basis van geboortedatum
-  const calculateAge = (dobStr) => {
+  // Helper: bereken leeftijd op basis van geboortedatum (function declaratie voor hoisting)
+  function calculateAge(dobStr) {
     if (!dobStr) return null;
     try {
       const dob = new Date(dobStr);
@@ -213,7 +278,7 @@ const RiderOnboarding = () => {
     } catch {
       return null;
     }
-  };
+  }
 
   // Auto-save functie
   const autoSave = async () => {
@@ -406,7 +471,7 @@ const RiderOnboarding = () => {
       window.removeEventListener('focus', onVisibility);
       window.removeEventListener('blur', onVisibility);
     };
-  }, [progressPercentage, loading, getToken]);
+  }, [matchingScore, loading, getToken]);
 
   // Toast helper
   const showToast = (message, type = 'info', durationMs = 3000) => {
@@ -519,16 +584,21 @@ const RiderOnboarding = () => {
             </div>
           </div>
 
-          {/* Progress */}
+          {/* Progress (Matching score + Publiceerbaar badge) */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-blue-600">Stap {currentStep} van {totalSteps}</span>
-              <span className="text-sm text-gray-500">{progressPercentage}% compleet</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{matchingScore}% matching</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${isPublishable ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>
+                  Publiceerbaar: {isPublishable ? 'Ja' : 'Nee'}
+                </span>
+              </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progressPercentage}%`, backgroundColor: 'var(--role-primary)' }}
+                style={{ width: `${matchingScore}%`, backgroundColor: 'var(--role-primary)' }}
               ></div>
             </div>
           </div>
@@ -536,13 +606,14 @@ const RiderOnboarding = () => {
           {/* Step 1: Basis Informatie */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>1</span>
                 Basis Informatie
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${step1MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step1MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
               {/* Profielfoto bovenaan */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Profielfoto</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Profielfoto <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                 <ImageUploader
                   value={(media.photos || []).slice(0,1)}
                   onChange={async (urls) => {
@@ -605,7 +676,7 @@ const RiderOnboarding = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Voornaam</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Voornaam <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                   <input
                     type="text"
                     value={basicInfo.first_name}
@@ -614,7 +685,7 @@ const RiderOnboarding = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Achternaam</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Achternaam <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                   <input
                     type="text"
                     value={basicInfo.last_name}
@@ -637,12 +708,23 @@ const RiderOnboarding = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Geboortedatum</label>
-                <input
-                  type="date"
-                  value={basicInfo.date_of_birth}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, date_of_birth: e.target.value })}
+                <label className="block text-sm font-medium text-gray-700 mb-2">Geboortedatum <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
+                <DatePicker
+                  selected={(basicInfo.date_of_birth ? new Date(`${basicInfo.date_of_birth}T00:00:00`) : null)}
+                  onChange={(date) => {
+                    const iso = date ? formatDate(date, 'yyyy-MM-dd') : '';
+                    setBasicInfo({ ...basicInfo, date_of_birth: iso });
+                  }}
+                  dateFormat="dd-MM-yyyy"
+                  placeholderText="dd-mm-jjjj"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
+                  minDate={new Date(1930, 0, 1)}
+                  maxDate={new Date()}
+                  openToDate={(!basicInfo.date_of_birth ? new Date(1995, 0, 1) : undefined)}
+                  scrollableYearDropdown
                 />
                 {(() => {
                   const age = calculateAge(basicInfo.date_of_birth);
@@ -702,7 +784,7 @@ const RiderOnboarding = () => {
               {/* Lengte & Gewicht */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Lengte (cm)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Lengte (cm) <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                   <input
                     type="number"
                     min={100}
@@ -714,7 +796,7 @@ const RiderOnboarding = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Gewicht (kg)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Gewicht (kg) <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                   <input
                     type="number"
                     min={30}
@@ -743,7 +825,7 @@ const RiderOnboarding = () => {
 
               {/* Adres */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Adres</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Adres <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                 <AddressPicker value={address} onChange={setAddress} />
                 <p className="mt-1 text-xs text-gray-500">Vul land, postcode, huisnummer, straat en plaats in.</p>
               </div>
@@ -787,9 +869,10 @@ const RiderOnboarding = () => {
           {/* Step 2: Beschikbaarheid */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>2</span>
                 Beschikbaarheid
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${step2MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step2MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
 
               {/* Min. dagen per week (algemeen) */}
@@ -813,7 +896,7 @@ const RiderOnboarding = () => {
 
               {/* Per-dag dagdelen (ochtend/middag/avond) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Beschikbaarheid per dag</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Beschikbaarheid per dag <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                 <div className="space-y-2">
                   {weekDays.map((day) => {
                     const schedule = availability.available_schedule || {};
@@ -908,14 +991,15 @@ const RiderOnboarding = () => {
           {/* Step 3: Budget */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>3</span>
                 Budget
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${step3MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step3MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum budget (€/maand)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum budget (€/maand) <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                   <input
                     type="number"
                     value={budget.budget_min_euro}
@@ -924,7 +1008,7 @@ const RiderOnboarding = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Maximum budget (€/maand)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Maximum budget (€/maand) <span className="text-[10px] uppercase tracking-wide ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Vereist</span></label>
                   <input
                     type="number"
                     value={budget.budget_max_euro}
@@ -941,10 +1025,12 @@ const RiderOnboarding = () => {
           {/* Step 7: Ervaring */}
           {currentStep === 7 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>7</span>
                 Ervaring
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${step7MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step7MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
+              <p className="text-xs text-gray-600 -mt-2">Minimaal: vul <strong>jaren ervaring</strong> of kies een <strong>hoofdactiviteit</strong> of <strong>subactiviteit</strong>. Bij <strong>Uitsluitend mennen</strong> is <strong>niveau mennen</strong> vereist.</p>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Jaren ervaring</label>
@@ -1142,10 +1228,12 @@ const RiderOnboarding = () => {
           {/* Step 4: Gewenste paard */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>4</span>
                 Gewenste paard/pony
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${step4MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step4MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
+              <p className="text-xs text-gray-600 -mt-2">Minimaal: kies <strong>Type</strong> of vul een <strong>Schofthoogte</strong> (min/max) in.</p>
 
               {/* Type en Schofthoogte */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1360,10 +1448,12 @@ const RiderOnboarding = () => {
           {/* Step 5: Doelen */}
           {currentStep === 5 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center mr-2 text-sm" style={{ backgroundColor: 'var(--role-primary-50)', color: 'var(--role-primary)' }}>5</span>
                 Doelen
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${step5MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step5MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
+              <p className="text-xs text-gray-600 -mt-2">Minimaal vereist alleen als je rijden kiest: selecteer een <strong>Rijdoel</strong> of <strong>Discipline</strong>.</p>
 
               {/* Wat wil je doen? (verplaatst hierheen) */}
               <div>
@@ -1757,9 +1847,10 @@ const RiderOnboarding = () => {
           {/* Step 6: Taken */}
           {currentStep === 6 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2 text-sm">6</span>
                 Taken
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${step6MinOk ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-yellow-50 border-yellow-400 text-yellow-700'}`}>Vereist voor publiceren: {step6MinOk ? 'Voldaan' : 'Niet voldaan'}</span>
               </h2>
 
               <div>
