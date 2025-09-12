@@ -157,6 +157,7 @@ const RiderProfile = () => {
       summary: [
         `${profileData.basicInfo.first_name || ''} ${profileData.basicInfo.last_name || ''}`.trim() || 'Naam: n.v.t.',
         profileData.basicInfo.postcode ? `Postcode: ${profileData.basicInfo.postcode}` : 'Postcode: n.v.t.',
+        profileData.basicInfo.city ? `Plaats: ${profileData.basicInfo.city}` : 'Plaats: n.v.t.',
         (Array.isArray(profileData.media.photos) && profileData.media.photos.length>0) ? 'Profielfoto: aanwezig' : 'Profielfoto: ontbreekt',
       ],
     },

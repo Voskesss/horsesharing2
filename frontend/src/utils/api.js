@@ -188,6 +188,7 @@ export const userAPI = {
 export function transformProfileDataForAPI(profileData) {
   const {
     basicInfo = {},
+    address = {},
     availability = {},
     budget = {},
     experience = {},
@@ -222,9 +223,17 @@ export function transformProfileDataForAPI(profileData) {
   add('last_name', basicInfo.last_name);
   add('phone', basicInfo.phone);
   add('date_of_birth', basicInfo.date_of_birth);
-  add('postcode', basicInfo.postcode);
-  add('house_number', basicInfo.house_number);
-  add('city', basicInfo.city);
+  // Adres (neem zowel address state als fallback basicInfo mee)
+  add('country_code', address.country_code || undefined);
+  add('postcode', address.postcode || basicInfo.postcode);
+  add('house_number', address.house_number || basicInfo.house_number);
+  add('house_number_addition', address.house_number_addition);
+  add('street', address.street || basicInfo.street);
+  add('city', address.city || basicInfo.city);
+  add('lat', address.lat);
+  add('lon', address.lon);
+  add('geocode_confidence', address.geocode_confidence);
+  add('needs_review', address.needs_review);
   add('max_travel_distance_km', basicInfo.max_travel_distance_km);
   add('transport_options', Array.isArray(basicInfo.transport_options) ? basicInfo.transport_options : []);
   // Lichaamskenmerken & bio
@@ -233,12 +242,9 @@ export function transformProfileDataForAPI(profileData) {
   if (typeof basicInfo.rider_bio === 'string') add('rider_bio', basicInfo.rider_bio);
   // Minderjarigen begeleiding
   add('parent_consent', basicInfo.parent_consent, { allowFalse: true });
-  if (basicInfo.parent_contact_name || basicInfo.parent_contact_email) {
-    const name = (basicInfo.parent_contact_name || '').trim();
-    const email = (basicInfo.parent_contact_email || '').trim();
-    const combined = email ? `${name}${name ? ' ' : ''}<${email}>` : name;
-    add('parent_contact', combined);
-  }
+  // Owner-style losse velden, maar ook legacy parent_contact wordt door backend geaccepteerd
+  if ((basicInfo.parent_contact_name || '').trim()) add('parent_name', basicInfo.parent_contact_name);
+  if ((basicInfo.parent_contact_email || '').trim()) add('parent_email', basicInfo.parent_contact_email);
 
   // Beschikbaarheid
   const hasScheduleObj = availability.available_schedule && typeof availability.available_schedule === 'object' && Object.keys(availability.available_schedule).length > 0;
@@ -379,6 +385,7 @@ export function transformProfileDataFromAPI(apiData) {
       date_of_birth: apiData.date_of_birth || '',
       postcode: apiData.postcode || '',
       house_number: apiData.house_number || '',
+      street: apiData.street || '',
       city: apiData.city || '',
       max_travel_distance_km: apiData.max_travel_distance_km || apiData.max_travel_distance || 25,
       transport_options: Array.isArray(apiData.transport_options) ? apiData.transport_options : [],
@@ -394,6 +401,19 @@ export function transformProfileDataFromAPI(apiData) {
         }
         return { parent_contact_name: raw || '', parent_contact_email: '' };
       })()
+    },
+    // Nieuw: adresobject voor AddressPicker
+    address: {
+      country_code: apiData.country_code || 'NL',
+      postcode: apiData.postcode || '',
+      house_number: apiData.house_number || '',
+      house_number_addition: apiData.house_number_addition || '',
+      street: apiData.street || '',
+      city: apiData.city || '',
+      lat: apiData.lat ?? null,
+      lon: apiData.lon ?? null,
+      geocode_confidence: apiData.geocode_confidence ?? null,
+      needs_review: apiData.needs_review ?? null,
     },
     availability: {
       available_days: parseJSONArray(apiData.available_days),

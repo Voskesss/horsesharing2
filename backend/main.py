@@ -306,7 +306,14 @@ class RiderProfileCreate(BaseModel):
     date_of_birth: Optional[str] = None
     postcode: Optional[str] = None
     house_number: Optional[str] = None
+    house_number_addition: Optional[str] = None
+    street: Optional[str] = None
     city: Optional[str] = None
+    country_code: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    geocode_confidence: Optional[float] = None
+    needs_review: Optional[bool] = None
     max_travel_distance_km: Optional[int] = 25
     transport_options: List[str] = []
     
@@ -1163,7 +1170,14 @@ async def create_or_update_rider_profile(
             user_id=current_user.id,
             postcode=data.get('postcode', '') or '',
             house_number=data.get('house_number') or '',
+            house_number_addition=data.get('house_number_addition') or None,
+            street=data.get('street') or None,
             city=data.get('city') or '',
+            country_code=(data.get('country_code') or None),
+            lat=(float(data.get('lat')) if data.get('lat') is not None else None),
+            lon=(float(data.get('lon')) if data.get('lon') is not None else None),
+            geocode_confidence=(float(data.get('geocode_confidence')) if data.get('geocode_confidence') is not None else None),
+            needs_review=(bool(data.get('needs_review')) if data.get('needs_review') is not None else None),
             max_travel_distance=data.get('max_travel_distance_km', 25) or 25,
             transport_options=data.get('transport_options', []) or [],
             available_days=availability_dict,
@@ -1276,7 +1290,14 @@ async def create_or_update_rider_profile(
         'date_of_birth': None, # Speciaal: mappen naar date_of_birth + age
         'postcode': 'postcode',
         'house_number': 'house_number',
+        'house_number_addition': 'house_number_addition',
+        'street': 'street',
         'city': 'city',
+        'country_code': 'country_code',
+        'lat': 'lat',
+        'lon': 'lon',
+        'geocode_confidence': 'geocode_confidence',
+        'needs_review': 'needs_review',
         'max_travel_distance_km': 'max_travel_distance',
         'transport_options': 'transport_options',
         'available_days': None,  # Speciaal: combineren met available_time_blocks
@@ -1487,7 +1508,14 @@ async def create_or_update_rider_profile(
         direct_map = {
             'postcode': 'postcode',
             'house_number': 'house_number',
+            'house_number_addition': 'house_number_addition',
+            'street': 'street',
             'city': 'city',
+            'country_code': 'country_code',
+            'lat': 'lat',
+            'lon': 'lon',
+            'geocode_confidence': 'geocode_confidence',
+            'needs_review': 'needs_review',
             'max_travel_distance_km': 'max_travel_distance',
             'transport_options': 'transport_options',
             'session_duration_min': 'session_duration_min',
@@ -1531,6 +1559,21 @@ async def create_or_update_rider_profile(
                         val = None
                 if dest in ('has_insurance',):
                     val = bool(val)
+                # floats voor geo
+                if dest in ('lat','lon','geocode_confidence'):
+                    try:
+                        val = float(val) if val is not None else None
+                    except Exception:
+                        val = None
+                # bool voor review-flag
+                if dest in ('needs_review',):
+                    try:
+                        val = bool(val) if val is not None else None
+                    except Exception:
+                        val = None
+                # normaliseer landcode naar 2-letter upper
+                if dest == 'country_code' and isinstance(val, str):
+                    val = (val or '').upper()[:2]
                 if dest in ('health_limitations', 'no_gos') and isinstance(val, list):
                     val = json.dumps(val)
                 setattr(existing_profile, dest, val)
@@ -1709,7 +1752,14 @@ async def get_rider_profile(
         "age": profile.age,
         "postcode": profile.postcode,
         "house_number": profile.house_number,
+        "house_number_addition": profile.house_number_addition,
+        "street": profile.street,
         "city": profile.city,
+        "country_code": profile.country_code,
+        "lat": profile.lat,
+        "lon": profile.lon,
+        "geocode_confidence": profile.geocode_confidence,
+        "needs_review": profile.needs_review,
         "max_travel_distance_km": profile.max_travel_distance,
         "transport_options": profile.transport_options if profile.transport_options else [],
         "available_days": flat_days,

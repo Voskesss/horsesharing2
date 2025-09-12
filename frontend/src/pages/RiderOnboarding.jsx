@@ -4,6 +4,7 @@ import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI, transformProfileDataForAPI, transformProfileDataFromAPI } from '../utils/api';
 import { calculateRiderProfileProgress } from '../utils/riderProfileProgress';
 import ImageUploader from '../components/ImageUploader';
+import AddressPicker from '../components/AddressPicker';
 import VideosUploader from '../components/VideosUploader';
 
 const RiderOnboarding = () => {
@@ -37,6 +38,9 @@ const RiderOnboarding = () => {
     rider_weight_kg: '',
     rider_bio: '',
   });
+
+  // Adres (zoals bij owner)
+  const [address, setAddress] = useState({ country_code: 'NL', postcode: '', house_number: '', house_number_addition: '', street: '', city: '', lat: null, lon: null, geocode_confidence: null, needs_review: null });
 
   // Beschikbaarheid
   const [availability, setAvailability] = useState({
@@ -172,6 +176,7 @@ const RiderOnboarding = () => {
   // Bereken progress percentage
   const profileData = {
     basicInfo,
+    address,
     availability,
     budget,
     experience,
@@ -183,6 +188,17 @@ const RiderOnboarding = () => {
     media
   };
   const progressPercentage = calculateRiderProfileProgress(profileData);
+
+  // Houd basicInfo.* in sync met address.* voor compat en payload-fallbacks
+  useEffect(() => {
+    setBasicInfo(prev => ({
+      ...prev,
+      postcode: address.postcode || prev.postcode || '',
+      house_number: address.house_number || prev.house_number || '',
+      street: address.street || prev.street || '',
+      city: address.city || prev.city || '',
+    }));
+  }, [address.postcode, address.house_number, address.street, address.city]);
 
   // Helper: bereken leeftijd op basis van geboortedatum
   const calculateAge = (dobStr) => {
@@ -204,7 +220,12 @@ const RiderOnboarding = () => {
     try {
       const api = createAPI(getToken);
       const apiData = transformProfileDataForAPI(profileData);
-      console.log('🛰️ POST /rider-profile payload min_days_per_week =', apiData.min_days_per_week);
+      console.log('🛰️ POST /rider-profile payload address:', {
+        street: apiData.street,
+        city: apiData.city,
+        postcode: apiData.postcode,
+        house_number: apiData.house_number,
+      });
       await api.riderProfile.createOrUpdate(apiData);
       console.log('Profile auto-saved successfully');
     } catch (error) {
@@ -249,17 +270,18 @@ const RiderOnboarding = () => {
           }
         }
         
-        if (hasServerProfile && apiData) {
-          console.log('🔍 RAW API DATA:', JSON.stringify(apiData, null, 2));
+        if (process.env.NODE_ENV !== 'production') {
+          // console.log('🔍 RAW API DATA:', JSON.stringify(apiData, null, 2)); // noisy
           console.log('📥 GET /rider-profile min_days_per_week =', apiData.min_days_per_week);
         }
         
         const transformedData = hasServerProfile && apiData ? transformProfileDataFromAPI(apiData) : transformProfileDataFromAPI({});
         
-        console.log('🔄 TRANSFORMED DATA:', JSON.stringify(transformedData, null, 2));
+        // console.log('🔄 TRANSFORMED DATA:', JSON.stringify(transformedData, null, 2)); // noisy
         
         // Update state with existing data
         setBasicInfo(transformedData.basicInfo);
+        if (transformedData.address) setAddress(transformedData.address);
         setAvailability(transformedData.availability);
         setBudget(transformedData.budget);
         setExperience(transformedData.experience);
@@ -345,7 +367,7 @@ const RiderOnboarding = () => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-  }, [basicInfo, availability, budget, experience, goals, skills, tasks, preferences, media, loading]);
+  }, [basicInfo, address, availability, budget, experience, goals, skills, tasks, preferences, media, loading]);
 
   // Auto-save elke 30 seconden, met smart regels
   useEffect(() => {
@@ -429,6 +451,12 @@ const RiderOnboarding = () => {
     try {
       const api = createAPI(getToken);
       const apiData = transformProfileDataForAPI(profileData);
+      console.log('💾 Draft save payload address:', {
+        street: apiData.street,
+        city: apiData.city,
+        postcode: apiData.postcode,
+        house_number: apiData.house_number,
+      });
       await api.riderProfile.createOrUpdate(apiData);
       showToast('Concept opgeslagen');
     } catch (error) {
@@ -713,17 +741,14 @@ const RiderOnboarding = () => {
                 <p className="text-xs text-gray-500 mt-1">Max. 1000 tekens</p>
               </div>
 
+              {/* Adres */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Adres</label>
+                <AddressPicker value={address} onChange={setAddress} />
+                <p className="mt-1 text-xs text-gray-500">Vul land, postcode, huisnummer, straat en plaats in.</p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Postcode</label>
-                  <input
-                    type="text"
-                    value={basicInfo.postcode}
-                    onChange={(e) => setBasicInfo({...basicInfo, postcode: e.target.value})}
-                    placeholder="1234AB"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Max reisafstand (km)</label>
                   <input

@@ -38,6 +38,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
       const resp = await fetch(url.toString());
       if (!resp.ok) throw new Error('Lookup failed');
       const data = await resp.json();
+      console.log('[AddressPicker] lookup result:', data);
       onChange?.({
         ...(v || {}),
         country_code: data.country_code || country,
@@ -51,6 +52,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
         geocode_confidence: data.confidence ?? 0.0,
         needs_review: false,
       });
+      console.log('[AddressPicker] onChange sent street:', data.street || v.street || '');
       setStatus({ state: 'ok', message: 'Adres bevestigd' });
     } catch (e) {
       setStatus({ state: 'error', message: 'Adres niet gevonden, controleer invoer of typ handmatig' });
@@ -118,7 +120,7 @@ export default function AddressPicker({ value, onChange, apiBase = 'http://local
           <input
             type="text"
             value={v.street || ''}
-            onChange={(e)=> setField('street', e.target.value)}
+            onChange={(e)=> { setField('street', e.target.value); console.log('[AddressPicker] manual street edit ->', e.target.value); }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2" style={{ outlineColor: 'var(--role-primary)' }}
           />
         </div>
