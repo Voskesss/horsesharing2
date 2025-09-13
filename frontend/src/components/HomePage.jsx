@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createAPI } from '../utils/api';
-import heroVideo from '../assets/watermarked_preview.mp4';
+import heroVideo from '../assets/twee_vrouwen_homepage.mp4';
 
 const HomePage = () => {
   const { login, isAuthenticated, getToken } = useKindeAuth();
@@ -10,6 +10,7 @@ const HomePage = () => {
   const roles = ['bijrijder', 'leaser', 'verzorger'];
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
+  const videoRef = useRef(null);
 
   // Laad optioneel user info, maar niet automatisch redirecten
   useEffect(() => {
@@ -37,8 +38,6 @@ const HomePage = () => {
     <div className="min-h-screen">
       {/* Hero Section with Cinematic Video Background (clipPath) */}
       <section className="relative overflow-hidden">
-        {/* Rechtervlak (wit) achter de clip voor vloeiende overgang */}
-        <div className="absolute inset-y-0 right-0 w-2/5 bg-white hidden md:block" />
 
         {/* Video achtergrond zonder vervorming (object-cover) + masker voor vloeiende rechterzijde */}
         <div className="absolute inset-0 hidden sm:block">
@@ -50,13 +49,26 @@ const HomePage = () => {
             }}
           >
             <video
+              ref={videoRef}
               className="w-full h-full object-cover"
               src={heroVideo}
               autoPlay
               muted
-              loop
               playsInline
               preload="metadata"
+              onEnded={() => {
+                try {
+                  const v = videoRef.current;
+                  if (v && !v.loop) {
+                    // Zorg dat het laatste frame zichtbaar blijft
+                    const end = Math.max(0, (v.duration || 0) - 0.01);
+                    if (!isNaN(end) && isFinite(end)) {
+                      v.currentTime = end;
+                    }
+                    v.pause();
+                  }
+                } catch {}
+              }}
             />
             {/* Vignet overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/45 pointer-events-none" />
@@ -83,10 +95,11 @@ const HomePage = () => {
               <span className="font-semibold text-emerald-200 sm:text-emerald-600"> Betere matching, meer bereik, minder moeite.</span>
             </p>
             {!isAuthenticated ? (
-              <div className="flex flex-col sm:flex-row gap-4 md:justify-start justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 md:justify-start justify-center items-center">
+                {/* Primair */}
                 <button
                   onClick={login}
-                  className="group bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                  className="group bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold py-3.5 px-7 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
                 >
                   <span className="flex items-center">
                     Begin met matchen
@@ -95,15 +108,21 @@ const HomePage = () => {
                     </svg>
                   </span>
                 </button>
-                <p className="text-sm text-white/90 sm:text-gray-200">
-                  ✨ Gratis tot je eerste succesvolle match
-                </p>
+                {/* Secundair wit */}
+                <a
+                  href="#why"
+                  className="py-3.5 px-7 rounded-full text-lg font-semibold bg-white/95 hover:bg-white text-gray-800 shadow-md hover:shadow-lg transition-all"
+                >
+                  Meer lezen
+                </a>
+                <p className="text-sm text-white/90 sm:text-gray-200">✨ Gratis tot je eerste succesvolle match</p>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-4 md:justify-start justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 md:justify-start justify-center items-center">
+                {/* Primair */}
                 <Link
                   to="/profile-choice"
-                  className="group bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                  className="group bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold py-3.5 px-7 rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
                 >
                   <span className="flex items-center">
                     Ga verder met onboarding
@@ -112,22 +131,42 @@ const HomePage = () => {
                     </svg>
                   </span>
                 </Link>
+                {/* Secundair wit */}
                 {me?.has_rider_profile && (
                   <Link
                     to="/rider-profile"
-                    className="text-emerald-200 hover:text-emerald-100 sm:text-emerald-700 sm:hover:text-emerald-800 font-semibold"
+                    className="py-3.5 px-7 rounded-full text-lg font-semibold bg-white/95 hover:bg-white text-gray-800 shadow-md hover:shadow-lg transition-all"
                   >
-                    Naar mijn profiel →
+                    Naar mijn profiel
                   </Link>
                 )}
               </div>
             )}
           </div>
         </div>
+
+        {/* Zachte blob-overlay links voor extra diepte (alleen desktop) */}
+        <div
+          className="hidden md:block absolute -left-24 top-10 w-[480px] h-[480px] rounded-full opacity-40 pointer-events-none"
+          style={{
+            background: 'radial-gradient(closest-side, rgba(16,185,129,0.30), rgba(59,130,246,0.18), transparent 70%)',
+            filter: 'blur(6px)'
+          }}
+        />
+
+        {/* Gelaagde golf-divider aan onderkant voor vloeiende overgang */}
+        <div className="absolute pointer-events-none left-0 right-0 bottom-[-48px] sm:bottom-[-56px] md:bottom-[-64px]">
+          <svg className="w-full h-12 sm:h-16 md:h-20" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+            <path fill="rgba(255,255,255,0.85)" d="M0,224L60,224C120,224,240,224,360,186.7C480,149,600,75,720,64C840,53,960,107,1080,138.7C1200,171,1320,181,1380,186.7L1440,192L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z" />
+          </svg>
+          <svg className="w-full h-10 sm:h-14 md:h-16 -mt-8" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+            <path fill="white" d="M0,256L60,245.3C120,235,240,213,360,213.3C480,213,600,235,720,229.3C840,224,960,192,1080,170.7C1200,149,1320,139,1380,133.3L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z" />
+          </svg>
+        </div>
       </section>
 
       {/* Why HorseSharing Section */}
-      <div className="py-20 bg-white">
+      <div id="why" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
