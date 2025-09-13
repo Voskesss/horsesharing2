@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createAPI } from '../utils/api';
+import { useActiveRole } from '../context/RoleContext';
 
 function Toast({ visible, message }) {
   if (!visible) return null;
@@ -16,6 +17,7 @@ const OwnerHorses = () => {
   const { isAuthenticated, getToken } = useKindeAuth();
   const api = createAPI(getToken);
   const navigate = useNavigate();
+  const { role: activeRole, setActiveRole } = useActiveRole();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ visible: false, message: '' });
@@ -39,13 +41,8 @@ const OwnerHorses = () => {
     if (!isAuthenticated) { navigate('/'); return; }
     (async () => {
       try {
-        // Auto-switch naar owner rol voor consistente themakleur als user beide profielen heeft
-        try {
-          const me = await api.user.getMe();
-          if (me?.has_owner_profile && me?.has_rider_profile && me?.profile_type_chosen !== 'owner') {
-            await api.user.setRole('owner');
-          }
-        } catch {}
+        // Forceer owner-rol in UI voor consistente themakleur
+        try { if (activeRole !== 'owner') await setActiveRole('owner'); } catch {}
         const res = await api.ownerHorses.list();
         setItems(Array.isArray(res?.horses) ? res.horses : []);
       } catch (e) {
@@ -55,6 +52,12 @@ const OwnerHorses = () => {
       }
     })();
   }, [isAuthenticated]);
+
+  // Helper: navigeer altijd in owner context
+  const goOwner = async (path) => {
+    try { if (activeRole !== 'owner') await setActiveRole('owner'); } catch {}
+    navigate(path);
+  };
 
   const onDelete = async (id) => {
     if (!window.confirm('Weet je zeker dat je deze advertentie wilt verwijderen?')) return;
@@ -77,7 +80,7 @@ const OwnerHorses = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Mijn Paarden</h1>
             <p className="text-gray-600">Beheer je concepten en advertenties</p>
           </div>
-          <button onClick={() => navigate('/owner/horses/new')} className="btn-role shadow">
+          <button onClick={() => goOwner('/owner/horses/new')} className="btn-role shadow">
             Nieuwe advertentie
           </button>
         </div>
@@ -117,7 +120,7 @@ const OwnerHorses = () => {
                   </div>
                   <div className="mt-4 flex gap-3 flex-wrap">
                     <button onClick={() => navigate(`/ads/${h.id}`)} className="px-3 py-1.5 text-sm rounded-lg border border-role text-role bg-role-soft hover:brightness-95">Bekijken</button>
-                    <button onClick={() => navigate(`/owner/horses/${h.id}/edit`)} className="btn-role text-sm">Bewerken</button>
+                    <button onClick={() => goOwner(`/owner/horses/${h.id}/edit`)} className="btn-role text-sm">Bewerken</button>
                     {h.is_available ? (
                       <button onClick={() => setPublished(h.id, false)} className="px-3 py-1.5 text-sm rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300">Naar concept</button>
                     ) : (

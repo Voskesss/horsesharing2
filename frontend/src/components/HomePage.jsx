@@ -3,6 +3,7 @@ import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createAPI } from '../utils/api';
 import heroVideo from '../assets/twee_vrouwen_homepage.mp4';
+import RoleAwareLink from './RoleAwareLink';
 
 const HomePage = () => {
   const { login, isAuthenticated, getToken } = useKindeAuth();
@@ -11,6 +12,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
   const videoRef = useRef(null);
+  const [videoEnded, setVideoEnded] = useState(false);
 
   // Laad optioneel user info, maar niet automatisch redirecten
   useEffect(() => {
@@ -66,12 +68,33 @@ const HomePage = () => {
                       v.currentTime = end;
                     }
                     v.pause();
+                    setVideoEnded(true);
                   }
                 } catch {}
               }}
             />
             {/* Vignet overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/45 pointer-events-none" />
+            {/* Replay knop na einde */}
+            {videoEnded && (
+              <button
+                onClick={() => {
+                  try {
+                    const v = videoRef.current;
+                    if (v) {
+                      setVideoEnded(false);
+                      v.currentTime = 0;
+                      v.play();
+                    }
+                  } catch {}
+                }}
+                className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-gray-800 rounded-full shadow-md hover:shadow-lg px-4 py-2 text-sm font-semibold flex items-center gap-2"
+                aria-label="Speel video opnieuw af"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 5V2L8 6l4 4V7c3.309 0 6 2.691 6 6a5.99 5.99 0 0 1-4.293 5.727l.514 1.932A7.985 7.985 0 0 0 20 13c0-4.411-3.589-8-8-8z"/></svg>
+                Opnieuw
+              </button>
+            )}
           </div>
         </div>
 
@@ -132,13 +155,14 @@ const HomePage = () => {
                   </span>
                 </Link>
                 {/* Secundair wit */}
-                {me?.has_rider_profile && (
-                  <Link
-                    to="/rider-profile"
+                {(me?.has_rider_profile || me?.has_owner_profile) && (
+                  <RoleAwareLink
+                    toRider="/rider-profile"
+                    toOwner="/owner/profile"
                     className="py-3.5 px-7 rounded-full text-lg font-semibold bg-white/95 hover:bg-white text-gray-800 shadow-md hover:shadow-lg transition-all"
                   >
                     Naar mijn profiel
-                  </Link>
+                  </RoleAwareLink>
                 )}
               </div>
             )}

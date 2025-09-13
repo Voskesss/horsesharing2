@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createAPI } from '../utils/api';
+import { useActiveRole } from '../context/RoleContext';
+import RoleAwareLink from '../components/RoleAwareLink';
 
 const Dashboard = () => {
   const { isAuthenticated, getToken } = useKindeAuth();
@@ -12,6 +14,7 @@ const Dashboard = () => {
   const [riderPhotoUrl, setRiderPhotoUrl] = useState(null);
   const [riderAvatarLoading, setRiderAvatarLoading] = useState(false);
   const [riderAvatarLoaded, setRiderAvatarLoaded] = useState(false);
+  const { role: activeRole, setActiveRole } = useActiveRole();
 
   useEffect(() => {
     let mounted = true;
@@ -29,15 +32,8 @@ const Dashboard = () => {
   if (!isAuthenticated) return null;
 
   const firstName = (me?.name || '').split(' ')[0] || 'Gebruiker';
-  const currentRole = useMemo(() => {
-    if (!me) return null;
-    if (me.profile_type_chosen) return me.profile_type_chosen;
-    if (me.has_owner_profile) return 'owner';
-    if (me.has_rider_profile) return 'rider';
-    return null;
-  }, [me]);
-  const isOwner = currentRole === 'owner';
-  const isRider = currentRole === 'rider';
+  const isOwner = activeRole === 'owner';
+  const isRider = activeRole === 'rider';
   const gradientFrom = isOwner ? 'from-amber-50 via-orange-50 to-rose-50' : 'from-emerald-50 via-teal-50 to-blue-50';
   const accentRing = isOwner ? 'ring-amber-200' : 'ring-emerald-200';
   const ctaPrimary = isOwner ? 'from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700' : 'from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700';
@@ -63,6 +59,18 @@ const Dashboard = () => {
     })();
     return () => { mounted = false; };
   }, [isAuthenticated, isRider]);
+
+  // Helper: wissel rol indien nodig en navigeer
+  const go = async (targetRole, path) => {
+    try {
+      if (targetRole && targetRole !== activeRole) {
+        await setActiveRole(targetRole);
+      }
+      navigate(path);
+    } catch {
+      navigate(path);
+    }
+  };
 
   // Reset fade-in wanneer URL verandert
   useEffect(() => {
@@ -109,18 +117,18 @@ const Dashboard = () => {
           {isOwner && (
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={() => navigate('/owner/horses/new')}
+                onClick={() => go('owner','/owner/horses/new')}
                 className={`px-5 py-3 rounded-xl bg-gradient-to-r ${ctaPrimary} text-white font-semibold shadow-lg`}
               >
                 Advertentie plaatsen
               </button>
-              <button onClick={() => navigate('/owner/horses')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Mijn paarden</button>
-              <button onClick={() => navigate('/owner/profile')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Mijn eigenaar profiel</button>
+              <button onClick={() => go('owner','/owner/horses')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Mijn paarden</button>
+              <button onClick={() => go('owner','/owner/profile')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Mijn eigenaar profiel</button>
             </div>
           )}
           {isRider && (
             <div className="flex flex-col sm:flex-row gap-3">
-              <button onClick={() => navigate('/rider-profile')} className={`px-5 py-3 rounded-xl bg-gradient-to-r ${ctaPrimary} text-white font-semibold shadow-lg`}>Mijn rijdersprofiel</button>
+              <button onClick={() => go('rider','/rider-profile')} className={`px-5 py-3 rounded-xl bg-gradient-to-r ${ctaPrimary} text-white font-semibold shadow-lg`}>Mijn rijdersprofiel</button>
               <button onClick={() => navigate('/search') } className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50" disabled>Zoek advertenties (binnenkort)</button>
               {!me?.has_owner_profile && (
                 <button onClick={() => navigate('/owner-onboarding')} className="px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-medium hover:bg-gray-50">Eigenaar profiel aanmaken</button>
@@ -137,13 +145,13 @@ const Dashboard = () => {
                 <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3">📣</div>
                 <h3 className="font-semibold text-gray-900 mb-1">Advertentie plaatsen</h3>
                 <p className="text-sm text-gray-600 mb-3">Maak een nieuwe advertentie voor je paard of pony.</p>
-                <button onClick={()=>navigate('/owner/horses/new')} className={`text-sm font-medium ${linkColor}`}>Starten →</button>
+                <button onClick={()=>go('owner','/owner/horses/new')} className={`text-sm font-medium ${linkColor}`}>Starten →</button>
               </div>
               <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
                 <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center mb-3">🐴</div>
                 <h3 className="font-semibold text-gray-900 mb-1">Mijn paarden</h3>
                 <p className="text-sm text-gray-600 mb-3">Beheer concepten en advertenties.</p>
-                <button onClick={()=>navigate('/owner/horses')} className={`text-sm font-medium ${linkColor}`}>Openen →</button>
+                <button onClick={()=>go('owner','/owner/horses')} className={`text-sm font-medium ${linkColor}`}>Openen →</button>
               </div>
             </>
           )}
@@ -153,7 +161,7 @@ const Dashboard = () => {
                 <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">👤</div>
                 <h3 className="font-semibold text-gray-900 mb-1">Rijdersprofiel</h3>
                 <p className="text-sm text-gray-600 mb-3">Bekijk en werk je rijdersprofiel bij.</p>
-                <button onClick={()=>navigate('/rider-profile')} className={`text-sm font-medium ${linkColor}`}>Openen →</button>
+                <button onClick={()=>go('rider','/rider-profile')} className={`text-sm font-medium ${linkColor}`}>Openen →</button>
               </div>
               <div className="bg-white rounded-xl shadow p-5 hover:shadow-md transition">
                 <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">🔎</div>
@@ -171,8 +179,8 @@ const Dashboard = () => {
               {!me?.has_owner_profile || !me?.has_rider_profile ? ' Maak ook het andere profiel aan.' : ''}
             </p>
             <div className="flex gap-3">
-              {me?.has_owner_profile && <button onClick={()=>navigate('/owner/profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Eigenaar →</button>}
-              {me?.has_rider_profile && <button onClick={()=>navigate('/rider-profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Rijder →</button>}
+              {me?.has_owner_profile && <button onClick={()=>go('owner','/owner/profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Eigenaar →</button>}
+              {me?.has_rider_profile && <button onClick={()=>go('rider','/rider-profile')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Rijder →</button>}
               {!me?.has_owner_profile && <button onClick={()=>navigate('/owner-onboarding')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Eigenaar aanmaken →</button>}
               {!me?.has_rider_profile && <button onClick={()=>navigate('/rider-onboarding')} className="text-blue-600 text-sm font-medium hover:text-blue-700">Rijder aanmaken →</button>}
             </div>

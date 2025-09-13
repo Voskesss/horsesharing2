@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import { createAPI } from '../utils/api';
+import { useActiveRole } from '../context/RoleContext';
 
 const Navbar = () => {
   const { login, logout, isAuthenticated, user, getToken } = useKindeAuth();
@@ -13,6 +14,7 @@ const Navbar = () => {
   const [avatarVersion, setAvatarVersion] = useState(0);
   const menuRef = useRef(null);
   const api = useMemo(() => createAPI(getToken), [getToken]);
+  const { role: currentRole, setActiveRole } = useActiveRole();
 
   useEffect(() => {
     let mounted = true;
@@ -32,22 +34,7 @@ const Navbar = () => {
     return () => { mounted = false; };
   }, [isAuthenticated, api]);
 
-  // Actieve rol afleiden en op body zetten voor theming
-  const currentRole = useMemo(() => {
-    if (!me) return null;
-    if (me.profile_type_chosen) return me.profile_type_chosen;
-    if (me.has_owner_profile) return 'owner';
-    if (me.has_rider_profile) return 'rider';
-    return null;
-  }, [me]);
-
-  useEffect(() => {
-    if (currentRole) {
-      document.body.dataset.role = currentRole;
-    } else {
-      delete document.body.dataset.role;
-    }
-  }, [currentRole]);
+  // Theming via RoleContext; no local body dataset mutations here
 
   // Wanneer rol 'rider' actief is, laad de eerste rider-foto als avatar
   useEffect(() => {
@@ -81,8 +68,8 @@ const Navbar = () => {
 
   const switchRole = async (role) => {
     try {
-      await api.user.setRole(role);
-      const data = await api.user.getMe();
+      await setActiveRole(role);
+      const data = await api.user.getMe(); // refresh me for menu/avatar consistency
       setMe(data);
       setOpen(false);
       // Navigeer naar primaire profielpagina van nieuwe rol

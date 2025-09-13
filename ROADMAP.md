@@ -45,6 +45,10 @@ Gebruik dit bestand als centrale to‑do lijst. Vink items af en voeg taken toe 
 - [ ] Unit tests mapping backend (payload → model)
 - [ ] E2E smoke (wizard flow happy path)
 - [ ] ESLint/Prettier config + CI hooks
+- [ ] Periodieke check: rolcontext consistentie (RoleContext/RouteGuards/RoleAwareLink)
+  - [ ] Handmatige URL → juiste redirect (rider ↔ owner)
+  - [ ] Themavariabelen wisselen direct mee (body[data-role])
+  - [ ] Alle primaire knoppen naar juiste omgeving (`/my-profile` of RoleAwareLink)
 
 ## Moderatie & Veiligheid
 - [ ] Rapportageknop bij advertenties (foto/tekst) → UI: 'Rapporteer' + modal met reden
