@@ -35,37 +35,31 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section with Cinematic Video Background */}
+      {/* Hero Section with Cinematic Video Background (clipPath) */}
       <section className="relative overflow-hidden">
-        {/* Video background (hidden on very small screens) */}
+        {/* Rechtervlak (wit) achter de clip voor vloeiende overgang */}
+        <div className="absolute inset-y-0 right-0 w-2/5 bg-white hidden md:block" />
+
+        {/* Video achtergrond zonder vervorming (object-cover) + masker voor vloeiende rechterzijde */}
         <div className="absolute inset-0 hidden sm:block">
-          <video
-            className="absolute inset-0 w-full h-full object-cover"
-            src={heroVideo}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-          />
-          {/* Vignette/gradient overlay for readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
-          {/* Organische wave overlay aan de rechterkant voor minder 'standaard' look */}
-          <svg
-            className="absolute right-0 top-0 h-full w-[42%] hidden md:block"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            aria-hidden="true"
+          <div
+            className="absolute inset-0"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to right, white 70%, transparent 98%)',
+              maskImage: 'linear-gradient(to right, white 70%, transparent 98%)',
+            }}
           >
-            <path
-              d="M0,0 L100,0 L100,100 C70,90 60,80 45,75 C30,70 20,70 0,65 Z"
-              fill="white"
-              fillOpacity="0.92"
+            <video
+              className="w-full h-full object-cover"
+              src={heroVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
             />
-          </svg>
-          {/* Subtiele paard watermark linksboven */}
-          <div className="absolute left-4 sm:left-8 top-6 sm:top-8 text-white/20 sm:text-white/15 select-none" style={{fontSize:'5rem', lineHeight:1}}>
-            🐎
+            {/* Vignet overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/45 pointer-events-none" />
           </div>
         </div>
 
